@@ -66,9 +66,11 @@ const THEMES = {
 const DEFAULT_THEME = "purple";
 const FONT_OPTIONS = ["Default", "Arcade", "Janeiro", "Roboto"];
 const DEFAULT_TITLE = "Floyo Sticky Note";
-const DEFAULT_CONTENT = `<h1>Floyo Sticky Note</h1>
-<p>Use this note to document and annotate your Floyo workflow on the canvas.</p>
-<p><b>Double-click</b> anywhere in this body to enter the editor and start writing.</p>`;
+// NOTE: the title lives in the LiteGraph title bar, not in the body —
+// so we don't duplicate it as an <h1> here.
+const DEFAULT_CONTENT = `<p>Use this sticky note to document and annotate your workflow on the canvas.</p>
+<p><b>Double-click</b> anywhere in this body to enter the editor and start writing.</p>
+<p>Double-click the <b>title bar</b> above to rename this note.</p>`;
 
 /* ─── Inject styles + Google Fonts (once) ─────────────────────────────── */
 
@@ -251,14 +253,30 @@ const STYLES = `
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
 .floyo-footer-pointer {
     color: var(--text-mute);
-    width: 26px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    cursor: default;
-    opacity: 0.85;
+    flex: 0 0 auto;
+}
+.floyo-pointer-svg { display: block; width: 24px; height: 24px; }
+.floyo-pointer-arrow {
+    fill: var(--text-mute);
+    opacity: 0.65;
+    cursor: pointer;
+    transition: fill 120ms ease, opacity 120ms ease, transform 120ms ease;
+    transform-origin: 12px 12px;
+}
+.floyo-pointer-arrow:hover {
+    fill: var(--accent);
+    opacity: 1;
+}
+.floyo-pointer-arrow.is-active {
+    fill: #fff;
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.55));
 }
 .floyo-footer-swatches { display: flex; gap: 6px; }
 .floyo-swatch {
@@ -364,10 +382,11 @@ function setupStickyNote(node) {
 
     // ── State (persisted to workflow JSON) ──
     node.properties = node.properties || {};
-    node.properties.theme     ??= DEFAULT_THEME;
-    node.properties.font      ??= "Default";
-    node.properties.title     ??= DEFAULT_TITLE;
-    node.properties.content   ??= DEFAULT_CONTENT;
+    node.properties.theme      ??= DEFAULT_THEME;
+    node.properties.font       ??= "Default";
+    node.properties.title      ??= DEFAULT_TITLE;
+    node.properties.content    ??= DEFAULT_CONTENT;
+    node.properties.pointerDir ??= null;   // null | "up" | "down" | "left" | "right"
 
     // ── Theme the LiteGraph node chrome so the title bar + body
     //    become the sticky-note design. The chrome IS the header — no
@@ -450,12 +469,124 @@ function setupStickyNote(node) {
         enterEditor();
     });
 
+    // ── Title rename via double-click on the LiteGraph title bar ──
+    // pos is in the node's local coords; title-bar zone is y < 0
+    // (LiteGraph passes the body-relative ctx, so the title bar is above 0).
+    const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+    node.onDblClick = function (e, pos /*, graphCanvas */) {
+        if (pos && pos[1] <= 0 && Math.abs(pos[1]) <= titleH + 4) {
+            const next = window.prompt("Rename note:", node.title || node.properties.title);
+            if (next != null) {
+                const v = next.trim() || DEFAULT_TITLE;
+                node.title = v;
+                node.properties.title = v;
+                node.setDirtyCanvas(true, true);
+            }
+            return true; // consume — don't let LiteGraph open subgraph etc.
+        }
+        return false;
+    };
+
+    // ── Pointer-arrow rendering on the LiteGraph canvas ──
+    // Draws a coloured arrow shaft + arrowhead extending from the chosen
+    // edge of the node out into empty canvas. The ctx LiteGraph passes is
+    // translated so (0,0) is the top-left of the body — the title bar is
+    // at negative y, so "up" arrows must start at -titleH to clear the bar.
+    const onDrawForeground = node.onDrawForeground;
+    node.onDrawForeground = function (ctx) {
+        onDrawForeground?.apply(this, arguments);
+        const dir = node.properties.pointerDir;
+        if (!dir || !node.size) return;
+        const [w, h] = node.size;
+        const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
+        const ext = 60;        // how far past the edge the arrow reaches
+        const head = 12;       // arrowhead size
+        let bx, by, tx, ty;
+        if (dir === "up") {
+            bx = w / 2; by = -titleH;
+            tx = w / 2; ty = -titleH - ext;
+        } else if (dir === "down") {
+            bx = w / 2; by = h;
+            tx = w / 2; ty = h + ext;
+        } else if (dir === "left") {
+            bx = 0;     by = h / 2;
+            tx = -ext;  ty = h / 2;
+        } else { // right
+            bx = w;       by = h / 2;
+            tx = w + ext; ty = h / 2;
+        }
+        ctx.save();
+        ctx.strokeStyle = t.accent;
+        ctx.fillStyle   = t.accent;
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+        // Arrowhead — a small filled triangle at the tip.
+        ctx.beginPath();
+        if (dir === "up") {
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(tx - head / 2, ty + head);
+            ctx.lineTo(tx + head / 2, ty + head);
+        } else if (dir === "down") {
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(tx - head / 2, ty - head);
+            ctx.lineTo(tx + head / 2, ty - head);
+        } else if (dir === "left") {
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(tx + head, ty - head / 2);
+            ctx.lineTo(tx + head, ty + head / 2);
+        } else {
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(tx - head, ty - head / 2);
+            ctx.lineTo(tx - head, ty + head / 2);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    };
+
     // Clean paste (strip styles but keep structure)
     editor.addEventListener("paste", (e) => {
         const text = e.clipboardData?.getData("text/plain");
         if (text != null) {
             e.preventDefault();
             document.execCommand("insertText", false, text);
+        }
+    });
+
+    // ── Slack-style code-block exit ──
+    // Inside <pre> code blocks the user otherwise has no way out. We allow:
+    //   • Double-Enter on an empty line  → exit to a new paragraph after.
+    //   • Arrow-Down at end of pre block → exit to a new paragraph after.
+    //   • Arrow-Up at start of pre block → exit to a new paragraph before.
+    editor.addEventListener("keydown", (e) => {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return;
+        const pre = findAncestor(sel.anchorNode, "PRE");
+        if (!pre) return;
+
+        if (e.key === "Enter" && !e.shiftKey) {
+            // Double-Enter: previous keystroke also Enter and current line empty
+            const text = pre.textContent || "";
+            const trailingEmpty = /\n\s*$/.test(text);
+            if (trailingEmpty || text.trim() === "") {
+                e.preventDefault();
+                exitCodeBlock(pre, "after");
+                return;
+            }
+        }
+        if (e.key === "ArrowDown" && atEndOf(pre, sel)) {
+            e.preventDefault();
+            exitCodeBlock(pre, "after");
+            return;
+        }
+        if (e.key === "ArrowUp" && atStartOf(pre, sel)) {
+            e.preventDefault();
+            exitCodeBlock(pre, "before");
+            return;
         }
     });
 
@@ -489,7 +620,12 @@ function setupStickyNote(node) {
         });
     }
 
-    // ── Footer wiring (theme swatches, font, save) ──
+    // ── Footer wiring (theme swatches, font, save, pointer direction) ──
+    function applyPointerActive() {
+        footer.querySelectorAll(".floyo-pointer-arrow").forEach((a) =>
+            a.classList.toggle("is-active", a.dataset.dir === node.properties.pointerDir)
+        );
+    }
     wireFooter(footer, wrapper, node, {
         onTheme: (t) => {
             node.properties.theme = t;
@@ -506,7 +642,15 @@ function setupStickyNote(node) {
             node.setDirtyCanvas(true, true);
         },
         onSave: exitEditor,
+        onPointerDir: (dir) => {
+            // Toggle: same arrow clicked again → clear
+            node.properties.pointerDir =
+                node.properties.pointerDir === dir ? null : dir;
+            applyPointerActive();
+            node.setDirtyCanvas(true, true);
+        },
     });
+    applyPointerActive();
     // Mark active swatch on first paint
     footer.querySelectorAll(".floyo-swatch").forEach((s) =>
         s.classList.toggle("is-active", s.dataset.theme === node.properties.theme)
@@ -540,10 +684,11 @@ function setupStickyNote(node) {
             node.properties.title = node.title;
         }
         o.floyo_state = {
-            theme:   node.properties.theme,
-            font:    node.properties.font,
-            title:   node.properties.title,
-            content: editor.innerHTML || node.properties.content,
+            theme:      node.properties.theme,
+            font:       node.properties.font,
+            title:      node.properties.title,
+            content:    editor.innerHTML || node.properties.content,
+            pointerDir: node.properties.pointerDir ?? null,
         };
     };
     const onConfigure = node.onConfigure;
@@ -562,6 +707,7 @@ function setupStickyNote(node) {
         footer.querySelectorAll(".floyo-swatch").forEach((sw) =>
             sw.classList.toggle("is-active", sw.dataset.theme === node.properties.theme)
         );
+        applyPointerActive();
         applyChromeTheme();
     };
 
@@ -589,9 +735,25 @@ function createToolbar() {
         { cmd: "strikeThrough",label: "S",  title: "Strikethrough", className: "tool-strike" },
         { cmd: "removeFormat", label: "Tₓ", title: "Clear formatting" },
         { sep: true },
-        { cmd: "formatBlock", arg: "PRE", label: "&lt;/&gt;", title: "Code block" },
-        { cmd: "insertUnorderedList", label: "• ≡", title: "Bullet list" },
-        { cmd: "insertOrderedList",   label: "1 ≡", title: "Numbered list" },
+        { cmd: "formatBlock", arg: "PRE", label: `<svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true">
+            <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M6 5 L2 9 L6 13 M12 5 L16 9 L12 13"/>
+        </svg>`, title: "Code block" },
+        { cmd: "insertUnorderedList", label: `<svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true">
+            <circle cx="3" cy="5"  r="1.4" fill="currentColor"/>
+            <circle cx="3" cy="9"  r="1.4" fill="currentColor"/>
+            <circle cx="3" cy="13" r="1.4" fill="currentColor"/>
+            <line x1="7" y1="5"  x2="16" y2="5"  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="7" y1="9"  x2="16" y2="9"  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="7" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>`, title: "Bullet list" },
+        { cmd: "insertOrderedList", label: `<svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true">
+            <text x="0.4" y="6.3"  font-size="5" font-weight="700" font-family="-apple-system, sans-serif" fill="currentColor">1</text>
+            <text x="0.4" y="10.5" font-size="5" font-weight="700" font-family="-apple-system, sans-serif" fill="currentColor">2</text>
+            <text x="0.4" y="14.7" font-size="5" font-weight="700" font-family="-apple-system, sans-serif" fill="currentColor">3</text>
+            <line x1="7" y1="5"  x2="16" y2="5"  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="7" y1="9"  x2="16" y2="9"  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="7" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>`, title: "Numbered list" },
     ];
     tools.forEach((t) => {
         if (t.sep) {
@@ -636,11 +798,17 @@ function createFooter() {
     const footer = document.createElement("div");
     footer.className = "floyo-sticky-footer";
 
+    // ── Pointer-direction widget ──
+    // A small compass: click an arrow to make the node project an arrow
+    // out of that edge of the canvas. Click the same arrow again to clear.
     const pointer = document.createElement("div");
     pointer.className = "floyo-footer-pointer";
-    pointer.title = "Drag node by header";
-    pointer.innerHTML = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-        <path fill="currentColor" d="M8 1.5 11 4.5 H9 V8 H12.5 V6 L15.5 9 L12.5 12 V10 H9 V13.5 H11 L8 16.5 L5 13.5 H7 V10 H3.5 V12 L0.5 9 L3.5 6 V8 H7 V4.5 H5 Z"/>
+    pointer.title = "Click an arrow to point this note at something on the canvas";
+    pointer.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="floyo-pointer-svg">
+        <path class="floyo-pointer-arrow" data-dir="up"    d="M12 2 L8.5 6 L10.8 6 L10.8 10.8 L13.2 10.8 L13.2 6 L15.5 6 Z"/>
+        <path class="floyo-pointer-arrow" data-dir="down"  d="M12 22 L15.5 18 L13.2 18 L13.2 13.2 L10.8 13.2 L10.8 18 L8.5 18 Z"/>
+        <path class="floyo-pointer-arrow" data-dir="left"  d="M2 12 L6 8.5 L6 10.8 L10.8 10.8 L10.8 13.2 L6 13.2 L6 15.5 Z"/>
+        <path class="floyo-pointer-arrow" data-dir="right" d="M22 12 L18 15.5 L18 13.2 L13.2 13.2 L13.2 10.8 L18 10.8 L18 8.5 Z"/>
     </svg>`;
     footer.appendChild(pointer);
 
@@ -686,7 +854,16 @@ function createFooter() {
     return footer;
 }
 
-function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave }) {
+function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave, onPointerDir }) {
+    // Pointer-direction arrows (4-way compass in the footer)
+    footer.querySelectorAll(".floyo-pointer-arrow").forEach((arrow) => {
+        arrow.addEventListener("mousedown", (e) => e.preventDefault());
+        arrow.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onPointerDir?.(arrow.dataset.dir);
+        });
+    });
     footer.querySelectorAll(".floyo-swatch").forEach((sw) => {
         sw.addEventListener("mousedown", (e) => e.preventDefault());
         sw.addEventListener("click", (e) => {
@@ -717,6 +894,60 @@ function placeCaretAtEnd(el) {
     const range = document.createRange();
     range.selectNodeContents(el);
     range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+/** Walk up the DOM until we hit a node whose tagName matches, or null. */
+function findAncestor(node, tagName) {
+    let el = node;
+    while (el && el !== document.body) {
+        if (el.nodeType === 1 && el.tagName === tagName) return el;
+        el = el.parentNode;
+    }
+    return null;
+}
+
+/** Is the caret at the very end of `el`'s text content? */
+function atEndOf(el, sel) {
+    const range = sel.getRangeAt(0).cloneRange();
+    range.selectNodeContents(el);
+    range.setStart(sel.anchorNode, sel.anchorOffset);
+    return range.toString().length === 0;
+}
+
+/** Is the caret at the very start of `el`'s text content? */
+function atStartOf(el, sel) {
+    const range = sel.getRangeAt(0).cloneRange();
+    range.selectNodeContents(el);
+    range.setEnd(sel.anchorNode, sel.anchorOffset);
+    return range.toString().length === 0;
+}
+
+/**
+ * Pop the caret out of a `<pre>` code block to a fresh paragraph
+ * positioned before or after it. Cleans up any trailing/leading blank
+ * lines left over from the Enter that triggered the exit.
+ */
+function exitCodeBlock(pre, where /* "before" | "after" */) {
+    // Trim a trailing/leading newline so the user doesn't end up with an
+    // empty line inside the code block after escaping.
+    if (where === "after") {
+        pre.textContent = (pre.textContent || "").replace(/\n+\s*$/, "");
+    } else {
+        pre.textContent = (pre.textContent || "").replace(/^\s*\n+/, "");
+    }
+    const p = document.createElement("p");
+    p.innerHTML = "<br>";
+    if (where === "after") {
+        pre.after(p);
+    } else {
+        pre.before(p);
+    }
+    const range = document.createRange();
+    range.setStart(p, 0);
+    range.collapse(true);
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
