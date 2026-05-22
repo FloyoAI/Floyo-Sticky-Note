@@ -21,3 +21,8 @@ venv/
 
 # Node / web
 node_modules/
+
+# Source/raw asset drops at repo root (duplicates of web/assets/ which is
+# the canonical shipped copy ComfyUI serves at /extensions/<pkg>/assets/).
+/assests/
+/assets/

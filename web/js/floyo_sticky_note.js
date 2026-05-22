@@ -19,6 +19,33 @@ import { app } from "../../../scripts/app.js";
 // JS file is not being loaded by ComfyUI at all.
 console.log("[Floyo Sticky Note] module loaded");
 
+/* ─── Asset URLs (resolved relative to this JS file) ──────────────────── */
+//
+// ComfyUI serves the package's `web/` folder at /extensions/<pkg>/. By
+// resolving the URL from `import.meta.url` we don't have to hard-code the
+// package name — it works regardless of what folder name the user clones
+// the repo into.
+const ASSETS_URL = new URL("../assets/", import.meta.url).href;
+const FLOYO_LOGO = `${ASSETS_URL}floyo-logo.png`;
+const YO_LOGO    = `${ASSETS_URL}yo-circle.png`;
+const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
+
+// Preload the Arcade font so the title text renders with it without a
+// flash of the system fallback. The CSS @font-face below is the canonical
+// declaration; this `FontFace` add just guarantees a load promise.
+(async function loadArcadeFont() {
+    try {
+        const face = new FontFace("ArcadePixelNeue", `url("${ARCADE_OTF}")`);
+        await face.load();
+        document.fonts.add(face);
+        // Force any node currently on the canvas to repaint with the new font.
+        app?.graph?.setDirtyCanvas?.(true, true);
+        console.log("[Floyo Sticky Note] Arcade font loaded");
+    } catch (e) {
+        console.warn("[Floyo Sticky Note] Arcade font load failed:", e);
+    }
+})();
+
 /* ─── Themes ──────────────────────────────────────────────────────────── */
 
 const THEMES = {
@@ -77,6 +104,14 @@ const DEFAULT_CONTENT = `<p>Use this sticky note to document and annotate your w
 const STYLE_ID = "floyo-sticky-note-styles";
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+@font-face {
+    font-family: 'ArcadePixelNeue';
+    src: url('${ARCADE_OTF}') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 
 .floyo-sticky-wrapper {
     --bg:        ${THEMES.purple.bg};
@@ -238,19 +273,66 @@ const STYLES = `
 .floyo-sticky-body a { color: var(--accent); text-decoration: underline; }
 .floyo-sticky-body ::selection { background: var(--accent); color: #0F0820; }
 
+/* ── Embedded media (image-by-URL + video-by-URL) ── */
+.floyo-sticky-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: block;
+    margin: 8px 0;
+    background: rgba(0, 0, 0, 0.25);
+}
+.floyo-embed {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;   /* 16:9 aspect ratio */
+    margin: 8px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--code-bg);
+}
+.floyo-embed iframe {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: none;
+}
+
 /* ── Footer (editor mode only) ── */
 .floyo-sticky-footer {
     flex: 0 0 auto;
     display: none;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     padding: 8px 12px;
     background: var(--toolbar);
     border-top: 1px solid rgba(0, 0, 0, 0.22);
-    min-height: 38px;
+    min-height: 42px;
     box-sizing: border-box;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
+
+/* Floyo full-wordmark logo on the bottom-left. */
+.floyo-footer-logo {
+    height: 22px;
+    width: auto;
+    flex: 0 0 auto;
+    user-select: none;
+    pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+
+/* Center cluster — swatches + font dropdown — fills the available
+   space so the logo sits left and the compass + save sit right. */
+.floyo-footer-center {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    justify-content: center;
+}
+
 .floyo-footer-pointer {
     color: var(--text-mute);
     width: 28px;
@@ -329,8 +411,72 @@ const STYLES = `
 
 /* Font choices */
 .floyo-sticky-wrapper[data-font="Roboto"]  { font-family: "Roboto", sans-serif; }
-.floyo-sticky-wrapper[data-font="Arcade"]  { font-family: "Arcade", "ArcadeClassic", monospace; }
+.floyo-sticky-wrapper[data-font="Arcade"]  { font-family: "ArcadePixelNeue", "Arcade", "Courier New", monospace; }
 .floyo-sticky-wrapper[data-font="Janeiro"] { font-family: "Janeiro", "Helvetica Neue", sans-serif; }
+
+/* ── URL-insert modal (matches Figma "Insert Image URL" / "Insert YouTube
+      URL or Vimeo URL" popups: title, input, Cancel + OK buttons) ── */
+.floyo-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999;
+    backdrop-filter: blur(2px);
+}
+.floyo-modal {
+    background: #FFFFFF;
+    color: #111;
+    border-radius: 14px;
+    padding: 20px 22px 18px;
+    width: min(420px, calc(100% - 40px));
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+}
+.floyo-modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #1F1F1F;
+}
+.floyo-modal-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid #D6D6D6;
+    border-radius: 8px;
+    outline: none;
+    box-sizing: border-box;
+    background: #fff;
+    color: #111;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.floyo-modal-input:focus {
+    border-color: ${THEMES.purple.header};
+    box-shadow: 0 0 0 3px ${THEMES.purple.header}22;
+}
+.floyo-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    justify-content: stretch;
+}
+.floyo-modal-btn {
+    flex: 1 1 0;
+    height: 38px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 120ms ease, transform 120ms ease;
+}
+.floyo-modal-btn:hover  { filter: brightness(0.95); }
+.floyo-modal-btn:active { transform: translateY(1px); }
+.floyo-modal-cancel { background: #F5C518; color: #2A1F00; }
+.floyo-modal-ok     { background: #22C55E; color: #052E17; }
 
 /* Scrollbar polish */
 .floyo-sticky-body::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -400,9 +546,10 @@ function setupStickyNote(node) {
     }
     applyChromeTheme();
 
-    // The LiteGraph title bar shows our title. Users can rename it
-    // via the native right-click → "Title" or by double-clicking the bar.
-    node.title = node.properties.title;
+    // Hide LiteGraph's built-in title text — we draw our own in the
+    // title-bar zone using the Arcade font (see onDrawForeground below).
+    // node.properties.title remains the source of truth.
+    node.title = "";
 
     // ── DOM ──
     const wrapper = document.createElement("div");
@@ -469,17 +616,16 @@ function setupStickyNote(node) {
         enterEditor();
     });
 
-    // ── Title rename via double-click on the LiteGraph title bar ──
+    // ── Title rename via double-click on the title-bar zone ──
     // pos is in the node's local coords; title-bar zone is y < 0
     // (LiteGraph passes the body-relative ctx, so the title bar is above 0).
     const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
     node.onDblClick = function (e, pos /*, graphCanvas */) {
         if (pos && pos[1] <= 0 && Math.abs(pos[1]) <= titleH + 4) {
-            const next = window.prompt("Rename note:", node.title || node.properties.title);
+            const next = window.prompt("Rename note:", node.properties.title || DEFAULT_TITLE);
             if (next != null) {
-                const v = next.trim() || DEFAULT_TITLE;
-                node.title = v;
-                node.properties.title = v;
+                node.properties.title = next.trim() || DEFAULT_TITLE;
+                // node.title stays "" so LiteGraph doesn't double-render.
                 node.setDirtyCanvas(true, true);
             }
             return true; // consume — don't let LiteGraph open subgraph etc.
@@ -488,63 +634,67 @@ function setupStickyNote(node) {
     };
 
     // ── Pointer-arrow rendering on the LiteGraph canvas ──
-    // Draws a coloured arrow shaft + arrowhead extending from the chosen
-    // edge of the node out into empty canvas. The ctx LiteGraph passes is
-    // translated so (0,0) is the top-left of the body — the title bar is
-    // at negative y, so "up" arrows must start at -titleH to clear the bar.
+    // Draws (a) the title text in the Arcade font in the title-bar zone,
+    // (b) a triangular speech-bubble notch protruding from the selected
+    // side of the node when a pointer direction is set. The ctx LiteGraph
+    // passes is translated so (0,0) is the top-left of the body — the
+    // title bar lives at y ∈ [-titleH, 0].
     const onDrawForeground = node.onDrawForeground;
     node.onDrawForeground = function (ctx) {
         onDrawForeground?.apply(this, arguments);
-        const dir = node.properties.pointerDir;
-        if (!dir || !node.size) return;
+        if (!node.size) return;
         const [w, h] = node.size;
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
-        const ext = 60;        // how far past the edge the arrow reaches
-        const head = 12;       // arrowhead size
-        let bx, by, tx, ty;
-        if (dir === "up") {
-            bx = w / 2; by = -titleH;
-            tx = w / 2; ty = -titleH - ext;
-        } else if (dir === "down") {
-            bx = w / 2; by = h;
-            tx = w / 2; ty = h + ext;
-        } else if (dir === "left") {
-            bx = 0;     by = h / 2;
-            tx = -ext;  ty = h / 2;
-        } else { // right
-            bx = w;       by = h / 2;
-            tx = w + ext; ty = h / 2;
+
+        // ── 1. Custom title text in Arcade font ──
+        if (node.properties.title) {
+            ctx.save();
+            ctx.font = `bold 16px "ArcadePixelNeue", "Courier New", monospace`;
+            ctx.fillStyle = "#FFFFFF";
+            ctx.textBaseline = "middle";
+            ctx.textAlign = "left";
+            // Leave room for LiteGraph's collapse dot (~22px from the left).
+            ctx.fillText(node.properties.title, 26, -titleH / 2 + 1);
+            ctx.restore();
         }
+
+        // ── 2. Direction notch (Matt's feedback) ──
+        // Speech-bubble-style triangle attached to the selected edge so
+        // the reader can tell what the floating note is pointing at.
+        const dir = node.properties.pointerDir;
+        if (!dir) return;
+        const base = 22;   // width of the notch base
+        const reach = 14;  // how far it protrudes
         ctx.save();
-        ctx.strokeStyle = t.accent;
-        ctx.fillStyle   = t.accent;
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(bx, by);
-        ctx.lineTo(tx, ty);
-        ctx.stroke();
-        // Arrowhead — a small filled triangle at the tip.
+        ctx.fillStyle   = t.header;
+        ctx.strokeStyle = t.border;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         if (dir === "up") {
-            ctx.moveTo(tx, ty);
-            ctx.lineTo(tx - head / 2, ty + head);
-            ctx.lineTo(tx + head / 2, ty + head);
+            const cx = w / 2;
+            ctx.moveTo(cx - base / 2, -titleH);
+            ctx.lineTo(cx + base / 2, -titleH);
+            ctx.lineTo(cx,            -titleH - reach);
         } else if (dir === "down") {
-            ctx.moveTo(tx, ty);
-            ctx.lineTo(tx - head / 2, ty - head);
-            ctx.lineTo(tx + head / 2, ty - head);
+            const cx = w / 2;
+            ctx.moveTo(cx - base / 2, h);
+            ctx.lineTo(cx + base / 2, h);
+            ctx.lineTo(cx,            h + reach);
         } else if (dir === "left") {
-            ctx.moveTo(tx, ty);
-            ctx.lineTo(tx + head, ty - head / 2);
-            ctx.lineTo(tx + head, ty + head / 2);
-        } else {
-            ctx.moveTo(tx, ty);
-            ctx.lineTo(tx - head, ty - head / 2);
-            ctx.lineTo(tx - head, ty + head / 2);
+            // Vertical center includes the title-bar zone visually.
+            const cy = (h - titleH) / 2;
+            ctx.moveTo(0,      cy - base / 2);
+            ctx.lineTo(0,      cy + base / 2);
+            ctx.lineTo(-reach, cy);
+        } else { // right
+            const cy = (h - titleH) / 2;
+            ctx.moveTo(w,         cy - base / 2);
+            ctx.lineTo(w,         cy + base / 2);
+            ctx.lineTo(w + reach, cy);
         }
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
         ctx.restore();
     };
 
@@ -679,10 +829,6 @@ function setupStickyNote(node) {
     const onSerialize = node.onSerialize;
     node.onSerialize = function (o) {
         onSerialize?.apply(this, arguments);
-        // Pull the freshest title from LiteGraph into our state.
-        if (typeof node.title === "string" && node.title.length) {
-            node.properties.title = node.title;
-        }
         o.floyo_state = {
             theme:      node.properties.theme,
             font:       node.properties.font,
@@ -699,7 +845,8 @@ function setupStickyNote(node) {
         Object.assign(node.properties, s);
         wrapper.dataset.theme = s.theme || DEFAULT_THEME;
         wrapper.dataset.font  = s.font  || "Default";
-        node.title = s.title || DEFAULT_TITLE;
+        // node.title stays "" — we draw our own with Arcade font from properties.title.
+        node.title = "";
         editor.innerHTML  = s.content || "";
         display.innerHTML = s.content || "";
         const fontSel = footer.querySelector(".floyo-footer-font");
@@ -754,6 +901,20 @@ function createToolbar() {
             <line x1="7" y1="9"  x2="16" y2="9"  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             <line x1="7" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>`, title: "Numbered list" },
+        { sep: true },
+        // Image-URL insert (Matt's feedback: reuse page-builder UX of asking
+        // for an image URL rather than a file upload — keeps workflow JSON
+        // small and the asset hosted externally).
+        { cmd: "insertImageURL", label: `<svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true">
+            <rect x="2" y="3" width="14" height="12" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="6" cy="7.5" r="1.4" fill="currentColor"/>
+            <path d="M2.6 13.5 L7 9.2 L10 12.2 L13 9.2 L15.4 11.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`, title: "Insert image URL" },
+        // YouTube / Vimeo embed
+        { cmd: "insertVideoURL", label: `<svg viewBox="0 0 18 18" width="14" height="14" aria-hidden="true">
+            <rect x="2" y="4" width="14" height="10" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M7.4 6.6 L7.4 11.4 L11.6 9 Z" fill="currentColor"/>
+        </svg>`, title: "Insert YouTube or Vimeo URL" },
     ];
     tools.forEach((t) => {
         if (t.sep) {
@@ -778,12 +939,47 @@ function wireToolbar(toolbar, editor, onChange) {
     toolbar.querySelectorAll(".floyo-tool-btn").forEach((btn) => {
         // Don't steal focus from the editor when toolbar is clicked.
         btn.addEventListener("mousedown", (e) => e.preventDefault());
-        btn.addEventListener("click", (e) => {
+        btn.addEventListener("click", async (e) => {
             e.preventDefault();
             e.stopPropagation();
             editor.focus();
             const cmd = btn.dataset.cmd;
             const arg = btn.dataset.arg || null;
+
+            // ── Custom commands (image / video URL inserts) ──
+            if (cmd === "insertImageURL") {
+                const url = await openUrlModal({
+                    title: "Insert Image URL",
+                    placeholder: "Paste image URL",
+                });
+                if (url) {
+                    editor.focus();
+                    insertHtmlAtSelection(editor,
+                        `<img src="${escapeAttr(url)}" alt="" />`
+                    );
+                    onChange();
+                }
+                return;
+            }
+            if (cmd === "insertVideoURL") {
+                const url = await openUrlModal({
+                    title: "Insert YouTube URL or Vimeo URL",
+                    placeholder: "Example: https://youtu.be/dQw4w9WgXcQ or https://vimeo.com/123",
+                });
+                if (url) {
+                    editor.focus();
+                    const embed = videoUrlToEmbed(url);
+                    if (embed) {
+                        insertHtmlAtSelection(editor, embed);
+                        onChange();
+                    } else {
+                        alert("That doesn't look like a YouTube or Vimeo URL.");
+                    }
+                }
+                return;
+            }
+
+            // ── Standard execCommand path ──
             try {
                 document.execCommand(cmd, false, arg);
             } catch (err) {
@@ -798,24 +994,17 @@ function createFooter() {
     const footer = document.createElement("div");
     footer.className = "floyo-sticky-footer";
 
-    // ── Pointer-direction widget ──
-    // A small compass: click an arrow to make the node project an arrow
-    // out of that edge of the canvas. Click the same arrow again to clear.
-    const pointer = document.createElement("div");
-    pointer.className = "floyo-footer-pointer";
-    pointer.title = "Click an arrow to point this note at something on the canvas";
-    pointer.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="floyo-pointer-svg">
-        <path class="floyo-pointer-arrow" data-dir="up"    d="M12 2 L8.5 6 L10.8 6 L10.8 10.8 L13.2 10.8 L13.2 6 L15.5 6 Z"/>
-        <path class="floyo-pointer-arrow" data-dir="down"  d="M12 22 L15.5 18 L13.2 18 L13.2 13.2 L10.8 13.2 L10.8 18 L8.5 18 Z"/>
-        <path class="floyo-pointer-arrow" data-dir="left"  d="M2 12 L6 8.5 L6 10.8 L10.8 10.8 L10.8 13.2 L6 13.2 L6 15.5 Z"/>
-        <path class="floyo-pointer-arrow" data-dir="right" d="M22 12 L18 15.5 L18 13.2 L13.2 13.2 L13.2 10.8 L18 10.8 L18 8.5 Z"/>
-    </svg>`;
-    footer.appendChild(pointer);
+    // ── Floyo logo (bottom-left) — full wordmark per senior preference ──
+    const logo = document.createElement("img");
+    logo.className = "floyo-footer-logo";
+    logo.src = FLOYO_LOGO;
+    logo.alt = "Floyo";
+    logo.draggable = false;
+    footer.appendChild(logo);
 
+    // ── Center cluster: swatches + font dropdown ──
     const center = document.createElement("div");
-    center.style.display = "flex";
-    center.style.alignItems = "center";
-    center.style.gap = "10px";
+    center.className = "floyo-footer-center";
 
     const swatches = document.createElement("div");
     swatches.className = "floyo-footer-swatches";
@@ -842,6 +1031,21 @@ function createFooter() {
 
     footer.appendChild(center);
 
+    // ── Pointer-direction compass (right of center, left of save) ──
+    // Click an arrow → a triangular notch appears on that edge of the
+    // node, indicating what the note is correlating to on the canvas.
+    const pointer = document.createElement("div");
+    pointer.className = "floyo-footer-pointer";
+    pointer.title = "Pick a side for the node to point from";
+    pointer.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="floyo-pointer-svg">
+        <path class="floyo-pointer-arrow" data-dir="up"    d="M12 2 L8.5 6 L10.8 6 L10.8 10.8 L13.2 10.8 L13.2 6 L15.5 6 Z"/>
+        <path class="floyo-pointer-arrow" data-dir="down"  d="M12 22 L15.5 18 L13.2 18 L13.2 13.2 L10.8 13.2 L10.8 18 L8.5 18 Z"/>
+        <path class="floyo-pointer-arrow" data-dir="left"  d="M2 12 L6 8.5 L6 10.8 L10.8 10.8 L10.8 13.2 L6 13.2 L6 15.5 Z"/>
+        <path class="floyo-pointer-arrow" data-dir="right" d="M22 12 L18 15.5 L18 13.2 L13.2 13.2 L13.2 10.8 L18 10.8 L18 8.5 Z"/>
+    </svg>`;
+    footer.appendChild(pointer);
+
+    // ── Save button (far right) ──
     const save = document.createElement("button");
     save.type = "button";
     save.className = "floyo-footer-save";
@@ -951,4 +1155,96 @@ function exitCodeBlock(pre, where /* "before" | "after" */) {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
+}
+
+/* ─── URL-insert helpers ─────────────────────────────────────────────── */
+
+function escapeAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;")
+                    .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Insert raw HTML at the current caret position inside `editor`. */
+function insertHtmlAtSelection(editor, html) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editor.contains(sel.anchorNode)) {
+        // No selection — append at end.
+        editor.insertAdjacentHTML("beforeend", html);
+        return;
+    }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const frag = range.createContextualFragment(html);
+    const lastNode = frag.lastChild;
+    range.insertNode(frag);
+    if (lastNode) {
+        range.setStartAfter(lastNode);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+}
+
+/**
+ * Recognise a YouTube or Vimeo URL and return an iframe-embed snippet.
+ * Returns `null` if the URL doesn't match a known pattern.
+ */
+function videoUrlToEmbed(url) {
+    if (!url) return null;
+    url = url.trim();
+    // YouTube — youtu.be/<id>, youtube.com/watch?v=<id>, youtube.com/embed/<id>, shorts/<id>
+    let m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+    if (m) {
+        const id = m[1];
+        return `<div class="floyo-embed floyo-embed-youtube"><iframe src="https://www.youtube.com/embed/${escapeAttr(id)}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>`;
+    }
+    // Vimeo — vimeo.com/<id>, player.vimeo.com/video/<id>
+    m = url.match(/(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/);
+    if (m) {
+        const id = m[1];
+        return `<div class="floyo-embed floyo-embed-vimeo"><iframe src="https://player.vimeo.com/video/${escapeAttr(id)}" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe></div>`;
+    }
+    return null;
+}
+
+/**
+ * Open a small modal asking for a URL. Resolves to the trimmed string the
+ * user typed (or null if cancelled). Matches the Figma "Insert Image URL"
+ * / "Insert YouTube URL or Vimeo URL" popups: title, input, Cancel + OK.
+ */
+function openUrlModal({ title, placeholder }) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "floyo-modal-overlay";
+        overlay.innerHTML = `
+            <div class="floyo-modal" role="dialog" aria-modal="true">
+                <div class="floyo-modal-title">${escapeAttr(title)}</div>
+                <input type="text" class="floyo-modal-input" placeholder="${escapeAttr(placeholder || "")}" />
+                <div class="floyo-modal-actions">
+                    <button type="button" class="floyo-modal-btn floyo-modal-cancel">Cancel</button>
+                    <button type="button" class="floyo-modal-btn floyo-modal-ok">OK</button>
+                </div>
+            </div>
+        `;
+        const close = (value) => {
+            overlay.remove();
+            document.removeEventListener("keydown", keyHandler, true);
+            resolve(value);
+        };
+        const keyHandler = (e) => {
+            if (e.key === "Escape") { e.preventDefault(); close(null); }
+            if (e.key === "Enter")  { e.preventDefault(); close(input.value.trim() || null); }
+        };
+        document.body.appendChild(overlay);
+        const input = overlay.querySelector(".floyo-modal-input");
+        const cancel = overlay.querySelector(".floyo-modal-cancel");
+        const ok = overlay.querySelector(".floyo-modal-ok");
+        cancel.addEventListener("click", () => close(null));
+        ok.addEventListener("click", () => close(input.value.trim() || null));
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) close(null); // click backdrop to dismiss
+        });
+        document.addEventListener("keydown", keyHandler, true);
+        setTimeout(() => input.focus(), 0);
+    });
 }
