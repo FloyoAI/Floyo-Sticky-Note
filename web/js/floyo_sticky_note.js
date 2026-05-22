@@ -57,10 +57,10 @@ const THEMES = {
 
 const DEFAULT_THEME = "purple";
 const FONT_OPTIONS = ["Default", "Arcade", "Janeiro", "Roboto"];
-const DEFAULT_CONTENT = `<h1>K Sampler</h1>
-<p><b>Where the image actually gets generated</b></p>
-<p>KSampler is the core generation node in ComfyUI. It takes the model, prompt conditioning, seed, sampling settings, and latent input, then runs the diffusion denoising process to produce the final latent image.</p>
-<p>Double-click this note to edit.</p>`;
+const DEFAULT_TITLE = "Floyo Sticky Note";
+const DEFAULT_CONTENT = `<h1>Floyo Sticky Note</h1>
+<p>Use this note to document and annotate your Floyo workflow on the canvas.</p>
+<p><b>Double-click</b> anywhere in this body to enter the editor and start writing.</p>`;
 
 /* ─── Inject styles + Google Fonts (once) ─────────────────────────────── */
 
@@ -82,7 +82,10 @@ const STYLES = `
 
     position: relative;
     width: 100%;
-    height: 100%;
+    /* Stretch the wrapper up over the (now invisible) LiteGraph title-bar
+       area so the purple frame becomes the entire visible node. */
+    margin-top: -30px;
+    height: calc(100% + 30px);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -403,12 +406,23 @@ app.registerExtension({
 function setupStickyNote(node) {
     injectStyles();
 
+    // ── Hide the default LiteGraph node chrome ──
+    // The purple wrapper IS the node — no outer frame, no separate title bar.
+    node.color   = "rgba(0,0,0,0)";   // title-bar background
+    node.bgcolor = "rgba(0,0,0,0)";   // node body background
+    const LG = window.LiteGraph;
+    if (LG && typeof LG.NO_TITLE === "number") {
+        node.title_mode = LG.NO_TITLE;
+    }
+    // Suppress the small "subtype" label LiteGraph draws when the title is empty.
+    node.title = "";
+
     // ── State (persisted to workflow JSON) ──
     node.properties = node.properties || {};
     node.properties.theme     ??= DEFAULT_THEME;
     node.properties.font      ??= "Default";
     node.properties.minimized ??= false;
-    node.properties.title     ??= "K Sampler";
+    node.properties.title     ??= DEFAULT_TITLE;
     node.properties.content   ??= DEFAULT_CONTENT;
 
     // ── DOM ──
