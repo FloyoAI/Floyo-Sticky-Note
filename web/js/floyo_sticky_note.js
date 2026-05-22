@@ -82,10 +82,7 @@ const STYLES = `
 
     position: relative;
     width: 100%;
-    /* Stretch the wrapper up over the (now invisible) LiteGraph title-bar
-       area so the purple frame becomes the entire visible node. */
-    margin-top: -30px;
-    height: calc(100% + 30px);
+    height: 100%;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
