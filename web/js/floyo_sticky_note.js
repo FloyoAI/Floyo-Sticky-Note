@@ -1,15 +1,23 @@
 /**
  * Floyo Sticky Note — frontend widget.
  *
- * Implements three visual states (display / minimized / editor) for a
- * canvas-only documentation node. All persistence happens via the node's
- * onSerialize / onConfigure hooks under the `floyo_state` key.
+ * The LiteGraph node chrome is themed to look like the purple/blue/green
+ * sticky note — title bar is the header, body is the dark gradient. A
+ * DOM widget inside renders the rich-text content, with a formatting
+ * toolbar + theme/font footer that appear when the user enters editor
+ * mode (double-click the body). Native LiteGraph collapse handles the
+ * "minimized" state. Persistence via onSerialize / onConfigure under
+ * the `floyo_state` key.
  *
  * The node carries no inputs and no outputs, so the ComfyUI prompt queue
  * skips it entirely — this node is purely a LiteGraph canvas artifact.
  */
 
 import { app } from "../../../scripts/app.js";
+
+// Top-level marker — if you don't see this in the browser console then the
+// JS file is not being loaded by ComfyUI at all.
+console.log("[Floyo Sticky Note] module loaded");
 
 /* ─── Themes ──────────────────────────────────────────────────────────── */
 
@@ -86,19 +94,16 @@ const STYLES = `
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    background: var(--bg-grad);
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    /* Transparent — the themed LiteGraph chrome provides the background.
+       Avoids a "frame inside a frame" look. */
+    background: transparent;
+    border: none;
+    border-radius: 0;
     overflow: hidden;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
     font-size: 13px;
     line-height: 1.55;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.25);
-    transition: box-shadow 160ms ease;
-}
-.floyo-sticky-wrapper:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Theme overrides */
@@ -115,50 +120,6 @@ const STYLES = `
     --toolbar:${THEMES.green.toolbar}; --text:${THEMES.green.text};
     --text-mute:${THEMES.green.textMuted}; --accent:${THEMES.green.accent};
     --border:${THEMES.green.border}; --code-bg:${THEMES.green.codeBg};
-}
-
-/* ── Header ── */
-.floyo-sticky-header {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: var(--header);
-    color: #fff;
-    font-weight: 600;
-    font-size: 13px;
-    letter-spacing: 0.1px;
-    cursor: pointer;
-    user-select: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.18);
-    min-height: 32px;
-    box-sizing: border-box;
-}
-.floyo-sticky-header:hover { background: var(--hover); }
-.floyo-sticky-chevron {
-    display: inline-block;
-    width: 14px;
-    transition: transform 160ms ease;
-    font-size: 10px;
-    opacity: 0.9;
-}
-.floyo-sticky-wrapper[data-minimized="true"] .floyo-sticky-chevron {
-    transform: rotate(180deg);
-}
-.floyo-sticky-title-text {
-    flex: 1 1 auto;
-    outline: none;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.floyo-sticky-title-text[contenteditable="true"] {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-    padding: 0 4px;
-    cursor: text;
 }
 
 /* ── Toolbar (editor mode only) ── */
@@ -219,11 +180,6 @@ const STYLES = `
     min-height: 0;
     position: relative;
 }
-.floyo-sticky-wrapper[data-minimized="true"] .floyo-sticky-body,
-.floyo-sticky-wrapper[data-minimized="true"] .floyo-sticky-footer {
-    display: none;
-}
-
 .floyo-sticky-display, .floyo-sticky-editor {
     outline: none;
     color: var(--text);
@@ -384,12 +340,15 @@ app.registerExtension({
     name: "Floyo.StickyNote",
     async beforeRegisterNodeDef(nodeType, nodeData /*, app */) {
         if (nodeData.name !== "FloyoStickyNote") return;
+        console.log("[Floyo Sticky Note] patching node class FloyoStickyNote");
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             const r = onNodeCreated?.apply(this, arguments);
             try {
+                console.log("[Floyo Sticky Note] onNodeCreated — setting up widget");
                 setupStickyNote(this);
+                console.log("[Floyo Sticky Note] setup complete");
             } catch (err) {
                 console.error("[Floyo Sticky Note] setup failed:", err);
             }
@@ -403,24 +362,28 @@ app.registerExtension({
 function setupStickyNote(node) {
     injectStyles();
 
-    // ── Hide the default LiteGraph node chrome ──
-    // The purple wrapper IS the node — no outer frame, no separate title bar.
-    node.color   = "rgba(0,0,0,0)";   // title-bar background
-    node.bgcolor = "rgba(0,0,0,0)";   // node body background
-    const LG = window.LiteGraph;
-    if (LG && typeof LG.NO_TITLE === "number") {
-        node.title_mode = LG.NO_TITLE;
-    }
-    // Suppress the small "subtype" label LiteGraph draws when the title is empty.
-    node.title = "";
-
     // ── State (persisted to workflow JSON) ──
     node.properties = node.properties || {};
     node.properties.theme     ??= DEFAULT_THEME;
     node.properties.font      ??= "Default";
-    node.properties.minimized ??= false;
     node.properties.title     ??= DEFAULT_TITLE;
     node.properties.content   ??= DEFAULT_CONTENT;
+
+    // ── Theme the LiteGraph node chrome so the title bar + body
+    //    become the sticky-note design. The chrome IS the header — no
+    //    separate in-DOM header, so there's no "outer box" feel anymore.
+    function applyChromeTheme() {
+        const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
+        node.color    = t.header;   // title-bar background
+        node.bgcolor  = t.bg;       // node body background
+        node.boxcolor = t.border;   // selection outline tint
+        node.setDirtyCanvas(true, true);
+    }
+    applyChromeTheme();
+
+    // The LiteGraph title bar shows our title. Users can rename it
+    // via the native right-click → "Title" or by double-clicking the bar.
+    node.title = node.properties.title;
 
     // ── DOM ──
     const wrapper = document.createElement("div");
@@ -428,20 +391,8 @@ function setupStickyNote(node) {
     wrapper.dataset.theme = node.properties.theme;
     wrapper.dataset.font = node.properties.font;
     wrapper.dataset.mode = "display";
-    wrapper.dataset.minimized = node.properties.minimized ? "true" : "false";
 
-    // Header
-    const header = document.createElement("div");
-    header.className = "floyo-sticky-header";
-    const chevron = document.createElement("span");
-    chevron.className = "floyo-sticky-chevron";
-    chevron.textContent = "▾";
-    const titleText = document.createElement("span");
-    titleText.className = "floyo-sticky-title-text";
-    titleText.textContent = node.properties.title;
-    header.append(chevron, titleText);
-
-    // Toolbar
+    // Toolbar (visible only in editor mode)
     const toolbar = createToolbar();
 
     // Body
@@ -457,10 +408,10 @@ function setupStickyNote(node) {
     editor.innerHTML = node.properties.content;
     body.append(display, editor);
 
-    // Footer
+    // Footer (visible only in editor mode)
     const footer = createFooter();
 
-    wrapper.append(header, toolbar, body, footer);
+    wrapper.append(toolbar, body, footer);
 
     // ── Attach as a DOM widget that fills the entire node ──
     const widget = node.addDOMWidget("floyo_sticky", "div", wrapper, {
@@ -473,26 +424,12 @@ function setupStickyNote(node) {
     };
 
     // ── Mode helpers ──
-    function applyMinimized() {
-        wrapper.dataset.minimized = node.properties.minimized ? "true" : "false";
-        if (node.properties.minimized) {
-            node.setSize([Math.max(node.size[0], 220), 44]);
-        } else {
-            const targetH = wrapper.dataset.mode === "editor" ? 480 : 300;
-            if (node.size[1] < 80) node.setSize([node.size[0], targetH]);
-        }
-        node.setDirtyCanvas(true, true);
-    }
-
     function enterEditor() {
-        if (node.properties.minimized) {
-            node.properties.minimized = false;
-        }
         wrapper.dataset.mode = "editor";
         editor.innerHTML = display.innerHTML;
         // Ensure enough height for toolbar + footer
         if (node.size[1] < 320) node.setSize([Math.max(node.size[0], 360), 480]);
-        applyMinimized();
+        node.setDirtyCanvas(true, true);
         setTimeout(() => {
             editor.focus();
             placeCaretAtEnd(editor);
@@ -506,40 +443,6 @@ function setupStickyNote(node) {
         wrapper.dataset.mode = "display";
         node.setDirtyCanvas(true, true);
     }
-
-    // ── Header interactions ──
-    header.addEventListener("click", (e) => {
-        // Ignore clicks on the title text — those are for editing the title
-        if (e.target === titleText) return;
-        if (wrapper.dataset.mode === "editor") return;
-        node.properties.minimized = !node.properties.minimized;
-        applyMinimized();
-    });
-
-    titleText.addEventListener("dblclick", (e) => {
-        e.stopPropagation();
-        titleText.contentEditable = "true";
-        titleText.focus();
-        // Select all
-        const range = document.createRange();
-        range.selectNodeContents(titleText);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-    });
-    titleText.addEventListener("blur", () => {
-        titleText.contentEditable = "false";
-        const next = titleText.textContent.trim();
-        node.properties.title = next || "Untitled Note";
-        if (!next) titleText.textContent = node.properties.title;
-    });
-    titleText.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") { e.preventDefault(); titleText.blur(); }
-        if (e.key === "Escape") {
-            titleText.textContent = node.properties.title;
-            titleText.blur();
-        }
-    });
 
     // ── Body interactions ──
     display.addEventListener("dblclick", (e) => {
@@ -594,7 +497,8 @@ function setupStickyNote(node) {
             footer.querySelectorAll(".floyo-swatch").forEach((s) =>
                 s.classList.toggle("is-active", s.dataset.theme === t)
             );
-            node.setDirtyCanvas(true, true);
+            // Update the LiteGraph chrome colors too — chrome IS the header.
+            applyChromeTheme();
         },
         onFont: (f) => {
             node.properties.font = f;
@@ -622,20 +526,24 @@ function setupStickyNote(node) {
 
     // ── Initial sizing ──
     if (!node.size || (node.size[0] < 220 || node.size[1] < 80)) {
-        node.setSize([320, node.properties.minimized ? 44 : 300]);
+        node.setSize([320, 300]);
     }
-    applyMinimized();
 
     // ── Persistence: onSerialize / onConfigure ──
+    // Keep node.title in sync with our stored title (the user can rename
+    // via LiteGraph's native title-edit which mutates node.title directly).
     const onSerialize = node.onSerialize;
     node.onSerialize = function (o) {
         onSerialize?.apply(this, arguments);
+        // Pull the freshest title from LiteGraph into our state.
+        if (typeof node.title === "string" && node.title.length) {
+            node.properties.title = node.title;
+        }
         o.floyo_state = {
-            theme:     node.properties.theme,
-            font:      node.properties.font,
-            minimized: node.properties.minimized,
-            title:     node.properties.title,
-            content:   editor.innerHTML || node.properties.content,
+            theme:   node.properties.theme,
+            font:    node.properties.font,
+            title:   node.properties.title,
+            content: editor.innerHTML || node.properties.content,
         };
     };
     const onConfigure = node.onConfigure;
@@ -646,7 +554,7 @@ function setupStickyNote(node) {
         Object.assign(node.properties, s);
         wrapper.dataset.theme = s.theme || DEFAULT_THEME;
         wrapper.dataset.font  = s.font  || "Default";
-        titleText.textContent = s.title || "Untitled Note";
+        node.title = s.title || DEFAULT_TITLE;
         editor.innerHTML  = s.content || "";
         display.innerHTML = s.content || "";
         const fontSel = footer.querySelector(".floyo-footer-font");
@@ -654,7 +562,7 @@ function setupStickyNote(node) {
         footer.querySelectorAll(".floyo-swatch").forEach((sw) =>
             sw.classList.toggle("is-active", sw.dataset.theme === node.properties.theme)
         );
-        applyMinimized();
+        applyChromeTheme();
     };
 
     // Cleanup when the node is removed
