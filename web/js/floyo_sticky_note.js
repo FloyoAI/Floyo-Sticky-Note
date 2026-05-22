@@ -782,8 +782,18 @@ function setupStickyNote(node) {
         }
     });
 
+    // Single sync helper used by every input/toolbar-action path. Mirrors
+    // editor.innerHTML into properties.content AND into display.innerHTML
+    // so the display view never lags behind even if exitEditor doesn't
+    // fire (e.g. when an insert happens via the URL/file modal).
+    function syncContent() {
+        const html = editor.innerHTML;
+        node.properties.content = html;
+        display.innerHTML = html;
+    }
+
     editor.addEventListener("input", () => {
-        node.properties.content = editor.innerHTML;
+        syncContent();
         refreshToolbarState();
     });
     editor.addEventListener("keyup", refreshToolbarState);
@@ -791,7 +801,7 @@ function setupStickyNote(node) {
 
     // ── Toolbar wiring ──
     wireToolbar(toolbar, editor, () => {
-        node.properties.content = editor.innerHTML;
+        syncContent();
         refreshToolbarState();
     });
 
@@ -853,6 +863,13 @@ function setupStickyNote(node) {
     const outsideHandler = (e) => {
         if (wrapper.dataset.mode !== "editor") return;
         if (wrapper.contains(e.target)) return;
+        // The URL / image-insert modal is appended to document.body, so
+        // its clicks are technically "outside the wrapper". Skip them —
+        // otherwise the mousedown on any modal button (Choose file, OK,
+        // Cancel, the text field…) fires exitEditor BEFORE the modal can
+        // finish its work, and the inserted image is lost because display
+        // div was already synced to the pre-insert content.
+        if (e.target.closest && e.target.closest(".floyo-modal-overlay")) return;
         // LiteGraph dispatches mousedown on its own canvas — when the user
         // clicks on a different node or empty canvas, the target won't be
         // inside our wrapper.
