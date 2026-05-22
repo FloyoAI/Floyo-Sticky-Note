@@ -1,0 +1,18 @@
+[project]
+name = "floyo-sticky-note"
+version = "0.1.0"
+description = "Stylised sticky-note documentation node for Floyo ComfyUI workflows. Canvas-only, never executes."
+authors = [
+    { name = "Floyo" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+
+[project.urls]
+"Homepage" = "https://floyo.ai"
+
+[tool.comfy]
+PublisherId = "floyo"
+DisplayName = "Floyo Sticky Note"
+Icon = ""
