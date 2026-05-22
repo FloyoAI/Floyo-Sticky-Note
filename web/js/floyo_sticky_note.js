@@ -478,6 +478,41 @@ const STYLES = `
 .floyo-modal-cancel { background: #F5C518; color: #2A1F00; }
 .floyo-modal-ok     { background: #22C55E; color: #052E17; }
 
+/* — Image-modal extras: "or" divider + "Choose from disk" button — */
+.floyo-modal-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0 10px;
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.floyo-modal-divider::before,
+.floyo-modal-divider::after {
+    content: "";
+    flex: 1 1 0;
+    height: 1px;
+    background: #E5E5E5;
+}
+.floyo-modal-file {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: ${THEMES.purple.header};
+    background: #F3EEFD;
+    border: 1.5px dashed ${THEMES.purple.header}80;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+.floyo-modal-file:hover {
+    background: #EBE3FB;
+    border-color: ${THEMES.purple.header};
+}
+
 /* Scrollbar polish */
 .floyo-sticky-body::-webkit-scrollbar { width: 8px; height: 8px; }
 .floyo-sticky-body::-webkit-scrollbar-track { background: transparent; }
@@ -548,8 +583,14 @@ function setupStickyNote(node) {
 
     // Hide LiteGraph's built-in title text — we draw our own in the
     // title-bar zone using the Arcade font (see onDrawForeground below).
-    // node.properties.title remains the source of truth.
+    // Setting `node.title = ""` is not enough because LiteGraph's
+    // `getTitle()` falls back to `node.constructor.title` (the registered
+    // display name) when title is falsy — that's what was producing the
+    // double-rendered title. Overriding `getTitle()` to always return ""
+    // short-circuits the fallback. node.properties.title remains the
+    // source of truth and is what we actually draw.
     node.title = "";
+    node.getTitle = function () { return ""; };
 
     // ── DOM ──
     const wrapper = document.createElement("div");
@@ -584,10 +625,11 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Make sure the widget tracks node size 1:1
-    widget.computeSize = function (width) {
-        return [width, Math.max(node.size?.[1] ?? 300, 40)];
-    };
+    // Report a fixed minimum size — don't echo back `node.size[1]` which
+    // creates a feedback loop where the node enlarges on every layout
+    // pass. ComfyUI will stretch the DOM widget to fill whatever the user
+    // has manually resized the node to.
+    widget.computeSize = function () { return [0, 0]; };
 
     // ── Mode helpers ──
     function enterEditor() {
@@ -948,14 +990,19 @@ function wireToolbar(toolbar, editor, onChange) {
 
             // ── Custom commands (image / video URL inserts) ──
             if (cmd === "insertImageURL") {
-                const url = await openUrlModal({
-                    title: "Insert Image URL",
+                // Image modal supports BOTH paste-URL and pick-local-file.
+                // For local files we read as base64 so the image travels
+                // with the workflow JSON (same approach as page builder).
+                const src = await openUrlModal({
+                    title: "Insert Image",
                     placeholder: "Paste image URL",
+                    allowFile: true,
+                    fileAccept: "image/*",
                 });
-                if (url) {
+                if (src) {
                     editor.focus();
                     insertHtmlAtSelection(editor,
-                        `<img src="${escapeAttr(url)}" alt="" />`
+                        `<img src="${escapeAttr(src)}" alt="" />`
                     );
                     onChange();
                 }
@@ -1209,17 +1256,25 @@ function videoUrlToEmbed(url) {
 
 /**
  * Open a small modal asking for a URL. Resolves to the trimmed string the
- * user typed (or null if cancelled). Matches the Figma "Insert Image URL"
- * / "Insert YouTube URL or Vimeo URL" popups: title, input, Cancel + OK.
+ * user typed (or null if cancelled). When `allowFile` is true, also shows
+ * a "Choose file from disk" button — picking a file reads it as a base64
+ * data URL and resolves with that, so the asset travels with the workflow
+ * (same approach as Floyo's page builder).
  */
-function openUrlModal({ title, placeholder }) {
+function openUrlModal({ title, placeholder, allowFile = false, fileAccept = "*/*" }) {
     return new Promise((resolve) => {
         const overlay = document.createElement("div");
         overlay.className = "floyo-modal-overlay";
+        const fileBlock = allowFile ? `
+            <div class="floyo-modal-divider"><span>or</span></div>
+            <button type="button" class="floyo-modal-file">Choose file from disk…</button>
+            <input type="file" class="floyo-modal-file-input" accept="${escapeAttr(fileAccept)}" hidden />
+        ` : "";
         overlay.innerHTML = `
             <div class="floyo-modal" role="dialog" aria-modal="true">
                 <div class="floyo-modal-title">${escapeAttr(title)}</div>
                 <input type="text" class="floyo-modal-input" placeholder="${escapeAttr(placeholder || "")}" />
+                ${fileBlock}
                 <div class="floyo-modal-actions">
                     <button type="button" class="floyo-modal-btn floyo-modal-cancel">Cancel</button>
                     <button type="button" class="floyo-modal-btn floyo-modal-ok">OK</button>
@@ -1236,14 +1291,34 @@ function openUrlModal({ title, placeholder }) {
             if (e.key === "Enter")  { e.preventDefault(); close(input.value.trim() || null); }
         };
         document.body.appendChild(overlay);
-        const input = overlay.querySelector(".floyo-modal-input");
+        const input  = overlay.querySelector(".floyo-modal-input");
         const cancel = overlay.querySelector(".floyo-modal-cancel");
-        const ok = overlay.querySelector(".floyo-modal-ok");
+        const ok     = overlay.querySelector(".floyo-modal-ok");
         cancel.addEventListener("click", () => close(null));
         ok.addEventListener("click", () => close(input.value.trim() || null));
         overlay.addEventListener("click", (e) => {
             if (e.target === overlay) close(null); // click backdrop to dismiss
         });
+        if (allowFile) {
+            const fileBtn   = overlay.querySelector(".floyo-modal-file");
+            const fileInput = overlay.querySelector(".floyo-modal-file-input");
+            fileBtn.addEventListener("click", () => fileInput.click());
+            fileInput.addEventListener("change", (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                // Sanity: warn at very large files but still proceed.
+                if (file.size > 5 * 1024 * 1024) {
+                    if (!confirm(`This file is ${(file.size/1024/1024).toFixed(1)} MB.\nLarge files bloat the workflow JSON. Continue?`)) {
+                        e.target.value = "";
+                        return;
+                    }
+                }
+                const reader = new FileReader();
+                reader.onload  = () => close(reader.result);   // data:image/...;base64,...
+                reader.onerror = () => { alert("Could not read that file."); };
+                reader.readAsDataURL(file);
+            });
+        }
         document.addEventListener("keydown", keyHandler, true);
         setTimeout(() => input.focus(), 0);
     });
