@@ -300,34 +300,52 @@ const STYLES = `
     gap: 4px;
     padding: 4px;
     background: rgba(15, 8, 32, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 8px;
     backdrop-filter: blur(6px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
     z-index: 50;
     user-select: none;
+    animation: floyoImgToolsIn 140ms ease-out;
 }
-.floyo-img-tools.is-visible { display: flex; }
+@keyframes floyoImgToolsIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.floyo-img-tools.is-visible { display: inline-flex; }
 .floyo-img-tool-btn {
-    width: 26px;
     height: 26px;
+    min-width: 26px;
     background: rgba(255, 255, 255, 0.10);
     border: none;
     border-radius: 5px;
     color: #fff;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
+    padding: 0 6px;
     transition: background 120ms ease, color 120ms ease, transform 120ms ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
 }
-.floyo-img-tool-btn:hover  { background: rgba(255, 255, 255, 0.20); }
+.floyo-img-tool-btn:hover  { background: rgba(255, 255, 255, 0.22); }
 .floyo-img-tool-btn:active { transform: scale(0.94); }
-.floyo-img-tool-delete { color: #FCA5A5; }
-.floyo-img-tool-delete:hover { background: rgba(248, 113, 113, 0.25); color: #FCA5A5; }
+.floyo-img-tool-delete {
+    background: rgba(220, 38, 38, 0.22);
+    color: #FECACA;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+.floyo-img-tool-delete:hover {
+    background: rgba(220, 38, 38, 0.7);
+    color: #fff;
+}
+.floyo-img-tool-delete svg { flex: 0 0 auto; }
 .floyo-embed {
     position: relative;
     width: 100%;
@@ -721,14 +739,22 @@ function setupStickyNote(node) {
     editor.spellcheck = false;
     editor.innerHTML = node.properties.content;
 
-    // Floating mini-toolbar that appears next to a selected image
-    // ([−] shrink, [+] enlarge, [×] delete).
+    // Floating mini-toolbar that appears inside the top-right corner of
+    // a selected (or hovered) image / video card:
+    //   [−] shrink, [+] enlarge, [Remove ×] delete.
+    // The Remove button is wider with an explicit label so the user
+    // can never miss how to get rid of a wrong embed.
     const imgTools = document.createElement("div");
     imgTools.className = "floyo-img-tools";
     imgTools.innerHTML = `
-        <button type="button" class="floyo-img-tool-btn" data-act="smaller" title="Make smaller">−</button>
-        <button type="button" class="floyo-img-tool-btn" data-act="bigger"  title="Make bigger">+</button>
-        <button type="button" class="floyo-img-tool-btn floyo-img-tool-delete" data-act="delete" title="Delete image">×</button>
+        <button type="button" class="floyo-img-tool-btn" data-act="smaller" title="Make smaller" aria-label="Make smaller">−</button>
+        <button type="button" class="floyo-img-tool-btn" data-act="bigger"  title="Make bigger"  aria-label="Make bigger">+</button>
+        <button type="button" class="floyo-img-tool-btn floyo-img-tool-delete" data-act="delete" title="Remove" aria-label="Remove">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                <path d="M4 4 L12 12 M12 4 L4 12"/>
+            </svg>
+            <span>Remove</span>
+        </button>
     `;
 
     body.append(display, editor, imgTools);
@@ -777,7 +803,12 @@ function setupStickyNote(node) {
     }
 
     // ── Body interactions ──
-    display.addEventListener("dblclick", (e) => {
+    // Double-click anywhere on the body — even on empty whitespace —
+    // enters editor mode. The display child handler was only firing
+    // when the click landed on visible content; bind on body itself
+    // to catch empty area too.
+    body.addEventListener("dblclick", (e) => {
+        if (wrapper.dataset.mode !== "display") return;
         e.stopPropagation();
         enterEditor();
     });
@@ -787,24 +818,40 @@ function setupStickyNote(node) {
     // outline it and float a mini toolbar above with [−] [+] [×] buttons.
     // Same UI for both media types.
     let selectedMedia = null;     // the actual element (img or embed div)
+    let hoveredMedia  = null;     // for hover-only display
+
     function positionMediaTools(el) {
         if (!el) return;
         const bRect = body.getBoundingClientRect();
         const eRect = el.getBoundingClientRect();
-        imgTools.style.left = (eRect.right - bRect.left - imgTools.offsetWidth) + "px";
-        const above = eRect.top - bRect.top - imgTools.offsetHeight - 6 + body.scrollTop;
-        imgTools.style.top = (above < 4 ? (eRect.top - bRect.top + 6 + body.scrollTop) : above) + "px";
+        // INSIDE the top-right corner of the media (Notion-style), so
+        // the controls always sit on top of the image / video card and
+        // are easy to find.
+        const PAD = 8;
+        imgTools.style.left = (eRect.right - bRect.left - imgTools.offsetWidth - PAD + body.scrollLeft) + "px";
+        imgTools.style.top  = (eRect.top   - bRect.top  + PAD + body.scrollTop) + "px";
     }
-    function selectMedia(el) {
-        if (selectedMedia) selectedMedia.classList.remove("is-selected");
-        selectedMedia = el;
+    function showTools(el, sticky) {
+        // sticky=true means selected (toolbar stays); false means hover-only.
+        if (selectedMedia && selectedMedia !== el) selectedMedia.classList.remove("is-selected");
+        if (sticky) {
+            selectedMedia = el;
+            if (el) el.classList.add("is-selected");
+        }
         if (el) {
-            el.classList.add("is-selected");
             imgTools.classList.add("is-visible");
             requestAnimationFrame(() => positionMediaTools(el));
-        } else {
-            imgTools.classList.remove("is-visible");
         }
+    }
+    function hideTools() {
+        if (selectedMedia) selectedMedia.classList.remove("is-selected");
+        selectedMedia = null;
+        hoveredMedia = null;
+        imgTools.classList.remove("is-visible");
+    }
+    // Backwards-compat alias used by the existing wiring below.
+    function selectMedia(el) {
+        if (el) showTools(el, true); else hideTools();
     }
     function mediaTarget(target) {
         // Returns the img / .floyo-embed ancestor (the thing we treat as
@@ -869,21 +916,45 @@ function setupStickyNote(node) {
     });
     // Reposition the mini-toolbar when the body scrolls so it sticks
     // to whatever is selected.
-    body.addEventListener("scroll", () => { if (selectedMedia) positionMediaTools(selectedMedia); });
+    body.addEventListener("scroll", () => {
+        if (selectedMedia) positionMediaTools(selectedMedia);
+        else if (hoveredMedia) positionMediaTools(hoveredMedia);
+    });
 
-    // ── Title rename via double-click on the title-bar zone ──
-    // pos is in the node's local coords; title-bar zone is y < 0
-    // (LiteGraph passes the body-relative ctx, so the title bar is above 0).
+    // Hover → tools appear (non-sticky). Move out → if not selected, hide.
+    editor.addEventListener("mousemove", (e) => {
+        const m = mediaTarget(e.target);
+        if (m === hoveredMedia) return;
+        hoveredMedia = m;
+        if (m && !selectedMedia) showTools(m, false);
+        else if (!selectedMedia)  imgTools.classList.remove("is-visible");
+    });
+    editor.addEventListener("mouseleave", () => {
+        hoveredMedia = null;
+        if (!selectedMedia) imgTools.classList.remove("is-visible");
+    });
+
+    // ── Title rename + enter-editor via LiteGraph-canvas double-click ──
+    // pos is in the node's local coords; title-bar zone is y < 0.
+    // (Some clicks land on LiteGraph's canvas BEFORE reaching the DOM
+    //  widget — this catches those.)
     const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
     node.onDblClick = function (e, pos /*, graphCanvas */) {
+        // Title-bar zone — open rename prompt.
         if (pos && pos[1] <= 0 && Math.abs(pos[1]) <= titleH + 4) {
             const next = window.prompt("Rename note:", node.properties.title || DEFAULT_TITLE);
             if (next != null) {
                 node.properties.title = next.trim() || DEFAULT_TITLE;
-                // node.title stays "" so LiteGraph doesn't double-render.
                 node.setDirtyCanvas(true, true);
             }
-            return true; // consume — don't let LiteGraph open subgraph etc.
+            return true;
+        }
+        // Body zone — enter editor mode (covers clicks that didn't
+        // bubble through the DOM widget, e.g. on the empty bottom
+        // padding area).
+        if (pos && pos[1] > 0 && wrapper.dataset.mode === "display") {
+            enterEditor();
+            return true;
         }
         return false;
     };
@@ -1252,7 +1323,7 @@ function wireToolbar(toolbar, editor, onChange) {
                 });
                 if (src) {
                     restoreSelection();
-                    insertHtmlAtSelection(editor,
+                    insertMediaWithTrailingParagraph(editor,
                         `<img src="${escapeAttr(src)}" alt="" />`
                     );
                     onChange();
@@ -1268,7 +1339,7 @@ function wireToolbar(toolbar, editor, onChange) {
                     const embed = videoUrlToEmbed(url);
                     if (embed) {
                         restoreSelection();
-                        insertHtmlAtSelection(editor, embed);
+                        insertMediaWithTrailingParagraph(editor, embed);
                         onChange();
                     } else {
                         alert("That doesn't look like a YouTube or Vimeo URL.");
@@ -1480,6 +1551,47 @@ function insertHtmlAtSelection(editor, html) {
         range.collapse(true);
         sel.removeAllRanges();
         sel.addRange(range);
+    }
+}
+
+/**
+ * Insert a media block (img / .floyo-embed) at the current caret, then
+ * append an empty <p> below and put the caret INSIDE it. Lets the user
+ * keep typing on the next line — the Word / Google-Docs flow of
+ * "paragraph, image, paragraph, image, paragraph".
+ */
+function insertMediaWithTrailingParagraph(editor, mediaHtml) {
+    const fullHtml = mediaHtml + '<p class="floyo-after-media"><br></p>';
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editor.contains(sel.anchorNode)) {
+        editor.insertAdjacentHTML("beforeend", fullHtml);
+        // Place caret inside the trailing <p> we just appended.
+        const trailing = editor.querySelector("p.floyo-after-media:last-child");
+        if (trailing) {
+            const r = document.createRange();
+            r.setStart(trailing, 0);
+            r.collapse(true);
+            const s = window.getSelection();
+            s.removeAllRanges();
+            s.addRange(r);
+        }
+        return;
+    }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const tmpl = document.createElement("template");
+    tmpl.innerHTML = fullHtml;
+    const frag = tmpl.content;
+    // Grab the trailing <p> BEFORE the fragment is moved into the DOM —
+    // otherwise frag.lastChild is null after insertNode(frag).
+    const trailingP = frag.lastChild;
+    range.insertNode(frag);
+    if (trailingP) {
+        const r = document.createRange();
+        r.setStart(trailingP, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
     }
 }
 
