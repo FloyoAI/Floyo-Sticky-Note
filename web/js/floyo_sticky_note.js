@@ -1236,13 +1236,32 @@ function setupStickyNote(node) {
     //   2. intercept setSize() and clamp inside it,
     //   3. re-clamp every paint in onDrawForeground.
     const MIN_W = 280, MIN_H = 160;
-    // Generous ceiling: the user must be able to resize the note as
-    // tall / wide as their content needs. The cap exists only to stop
-    // a runaway feedback loop from making the node fill the whole
-    // canvas (which is what happened before the embed-resize fix).
-    // 1600×1200 is plenty of practical room for the manual resize
-    // handle without letting the node turn into a wall.
     const MAX_W = 1600, MAX_H = 1200;
+
+    // ── Debug: trace every node.size change so we can see WHO is
+    // growing the node and from where. Poll every 200 ms; on every
+    // change, dump the old/new values + a stack to identify the
+    // caller.
+    let lastSize = node.size ? [...node.size] : [0, 0];
+    const sizeMon = setInterval(() => {
+        if (!node.size) return;
+        if (node.size[0] !== lastSize[0] || node.size[1] !== lastSize[1]) {
+            console.log(
+                "%c[Floyo size]",
+                "color:#FBBF24;font-weight:700",
+                "was", [...lastSize],
+                "→ now", [...node.size],
+                "  (delta", [node.size[0] - lastSize[0], node.size[1] - lastSize[1]], ")"
+            );
+            lastSize = [...node.size];
+        }
+    }, 200);
+    // Clean up on removal so we don't leak.
+    const _origRemovedSize = node.onRemoved;
+    node.onRemoved = function () {
+        clearInterval(sizeMon);
+        return _origRemovedSize?.apply(this, arguments);
+    };
     function clampSize() {
         if (!node.size) return false;
         let changed = false;
