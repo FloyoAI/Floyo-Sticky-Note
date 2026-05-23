@@ -806,37 +806,28 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Widget tells LiteGraph "I take zero space" — [0, -4] is the
-    // convention for "skip me in layout calculations". Combined with
-    // the node.computeSize override below, this stops every feedback
-    // loop between widget size and node size.
-    widget.computeSize = function () { return [0, -4]; };
+    // Widget claims (node body width × body height) so ComfyUI sizes
+    // its DOM container correctly and the wrapper inside it just fills
+    // 100%. Stable because changing node.size only changes the next
+    // widget.computeSize return by the same delta — no feedback loop.
+    widget.computeSize = function () {
+        if (!node.size) return [420, 200];
+        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+        return [node.size[0], Math.max(60, node.size[1] - titleH)];
+    };
 
     // The node's OWN computeSize is what LiteGraph uses to determine
-    // its MINIMUM size during resize. We return a small floor (240×80)
-    // so the user can drag the handle all the way down — but no
-    // smaller. Returning node.size would have made the current size
-    // the minimum, blocking shrink entirely. Returning a tiny floor
-    // here, combined with widget.computeSize=[0,-4], gives LiteGraph
-    // no reason to grow the node beyond what the user drags to.
+    // its MINIMUM size during resize. Returning a small floor (240×80)
+    // lets the user drag the handle all the way down. Returning
+    // node.size would make the current size the minimum and block
+    // shrinking entirely.
     node.computeSize = function () { return [240, 80]; };
 
-    // Force the wrapper to fill the node body exactly. Since the widget
-    // claims [0, -4], the DOM container ComfyUI creates is essentially
-    // collapsed; we position the wrapper absolutely inside it and size
-    // it from node.size on every paint.
-    function syncWrapperSize() {
-        if (!node.size) return;
-        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        wrapper.style.position = "absolute";
-        wrapper.style.left = "0";
-        wrapper.style.top = "0";
-        wrapper.style.width  = node.size[0] + "px";
-        wrapper.style.height = (node.size[1] - titleH) + "px";
-        const parent = wrapper.parentElement;
-        if (parent) parent.style.overflow = "visible";
-    }
-    queueMicrotask(syncWrapperSize);
+    // No syncWrapperSize override — the wrapper's CSS `height: 100%`
+    // resolves to the DOM container's height, which ComfyUI now sizes
+    // correctly from widget.computeSize. Manual sizing was making the
+    // wrapper a couple of px wider than the chrome's visible body,
+    // which is what was overflowing on the right.
 
     // ── Mode helpers ──
     function enterEditor() {
@@ -1316,7 +1307,6 @@ function setupStickyNote(node) {
     const onDrawForegroundClamp = node.onDrawForeground;
     node.onDrawForeground = function () {
         clampSize();
-        syncWrapperSize();
         return onDrawForegroundClamp?.apply(this, arguments);
     };
 
