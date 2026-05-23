@@ -337,11 +337,69 @@ const STYLES = `
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: var(--code-bg);
+    cursor: pointer;
+    transition: outline 120ms ease, box-shadow 120ms ease;
+}
+.floyo-embed.is-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 .floyo-embed iframe {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     border: none;
+}
+.floyo-embed-thumb {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    background: transparent;
+    pointer-events: none;
+    user-select: none;
+}
+.floyo-embed-play {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.78);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 4px;   /* nudge the play triangle visually centred */
+    transition: background 140ms ease, transform 140ms ease;
+}
+.floyo-embed-youtube .floyo-embed-play:hover {
+    background: #FF0000;  /* YouTube red */
+    transform: translate(-50%, -50%) scale(1.06);
+}
+.floyo-embed-vimeo .floyo-embed-play:hover {
+    background: #1AB7EA;  /* Vimeo cyan */
+    transform: translate(-50%, -50%) scale(1.06);
+}
+.floyo-embed-brand {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* ── Footer (editor mode only) ── */
@@ -724,63 +782,94 @@ function setupStickyNote(node) {
         enterEditor();
     });
 
-    // ── Image selection + resize + delete ──
-    // Click an <img> inside the editor → outline it and float a mini
-    // toolbar above it with [−] [+] [×] buttons.
-    let selectedImg = null;
-    function positionImgTools(img) {
-        if (!img) return;
-        // Position relative to the body (body is position: relative).
+    // ── Image + video selection / resize / delete ──
+    // Click an <img> or .floyo-embed (video card) inside the editor →
+    // outline it and float a mini toolbar above with [−] [+] [×] buttons.
+    // Same UI for both media types.
+    let selectedMedia = null;     // the actual element (img or embed div)
+    function positionMediaTools(el) {
+        if (!el) return;
         const bRect = body.getBoundingClientRect();
-        const iRect = img.getBoundingClientRect();
-        // Place above the image's top-right corner, but flip below if
-        // there's not enough room.
-        imgTools.style.left = (iRect.right - bRect.left - imgTools.offsetWidth) + "px";
-        const above = iRect.top - bRect.top - imgTools.offsetHeight - 6 + body.scrollTop;
-        imgTools.style.top = (above < 4 ? (iRect.top - bRect.top + 6 + body.scrollTop) : above) + "px";
+        const eRect = el.getBoundingClientRect();
+        imgTools.style.left = (eRect.right - bRect.left - imgTools.offsetWidth) + "px";
+        const above = eRect.top - bRect.top - imgTools.offsetHeight - 6 + body.scrollTop;
+        imgTools.style.top = (above < 4 ? (eRect.top - bRect.top + 6 + body.scrollTop) : above) + "px";
     }
-    function selectImg(img) {
-        if (selectedImg) selectedImg.classList.remove("is-selected");
-        selectedImg = img;
-        if (img) {
-            img.classList.add("is-selected");
+    function selectMedia(el) {
+        if (selectedMedia) selectedMedia.classList.remove("is-selected");
+        selectedMedia = el;
+        if (el) {
+            el.classList.add("is-selected");
             imgTools.classList.add("is-visible");
-            // Position after the next paint so offsetWidth is accurate.
-            requestAnimationFrame(() => positionImgTools(img));
+            requestAnimationFrame(() => positionMediaTools(el));
         } else {
             imgTools.classList.remove("is-visible");
         }
     }
+    function mediaTarget(target) {
+        // Returns the img / .floyo-embed ancestor (the thing we treat as
+        // a single selectable block), or null if click was on neither.
+        if (!target) return null;
+        const embed = target.closest(".floyo-embed");
+        if (embed && editor.contains(embed)) return embed;
+        if (target.tagName === "IMG" && !target.classList.contains("floyo-embed-thumb") && editor.contains(target)) {
+            return target;
+        }
+        return null;
+    }
     editor.addEventListener("click", (e) => {
-        if (e.target.tagName === "IMG" && editor.contains(e.target)) {
+        // ── Play button inside a video card → swap thumbnail for iframe ──
+        const playBtn = e.target.closest(".floyo-embed-play");
+        if (playBtn && editor.contains(playBtn)) {
             e.preventDefault();
-            selectImg(e.target);
+            e.stopPropagation();
+            const embed = playBtn.closest(".floyo-embed");
+            const id = embed?.dataset.videoId;
+            const platform = embed?.dataset.platform;
+            if (!embed || !id) return;
+            const src = platform === "youtube"
+                ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`
+                : `https://player.vimeo.com/video/${id}?autoplay=1`;
+            // Replace the whole card with just the iframe (keeps the
+            // outer .floyo-embed wrapper so the 16:9 aspect-ratio +
+            // selection behaviour all still work).
+            embed.innerHTML = `<iframe src="${src}" frameborder="0" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"></iframe>`;
+            syncContent();
+            return;
+        }
+
+        // ── Selection (img / embed) ──
+        const m = mediaTarget(e.target);
+        if (m) {
+            e.preventDefault();
+            selectMedia(m);
         } else if (!imgTools.contains(e.target)) {
-            selectImg(null);
+            selectMedia(null);
         }
     });
     imgTools.addEventListener("mousedown", (e) => e.preventDefault());
     imgTools.addEventListener("click", (e) => {
         const btn = e.target.closest(".floyo-img-tool-btn");
-        if (!btn || !selectedImg) return;
+        if (!btn || !selectedMedia) return;
         e.stopPropagation();
         const act = btn.dataset.act;
         if (act === "smaller" || act === "bigger") {
-            const curr = selectedImg.offsetWidth || 200;
+            const curr = selectedMedia.offsetWidth || 200;
             const next = act === "bigger" ? curr * 1.2 : curr * 0.8;
-            const maxW = body.clientWidth - 28;          // body padding margin
-            selectedImg.style.width = Math.max(60, Math.min(maxW, next)) + "px";
-            selectedImg.style.height = "auto";
-            requestAnimationFrame(() => positionImgTools(selectedImg));
+            const maxW = body.clientWidth - 28;
+            selectedMedia.style.width = Math.max(80, Math.min(maxW, next)) + "px";
+            if (selectedMedia.tagName === "IMG") selectedMedia.style.height = "auto";
+            requestAnimationFrame(() => positionMediaTools(selectedMedia));
         } else if (act === "delete") {
-            const img = selectedImg;
-            selectImg(null);
-            img.remove();
+            const el = selectedMedia;
+            selectMedia(null);
+            el.remove();
         }
         syncContent();
     });
-    // Reposition the mini-toolbar when the body scrolls.
-    body.addEventListener("scroll", () => { if (selectedImg) positionImgTools(selectedImg); });
+    // Reposition the mini-toolbar when the body scrolls so it sticks
+    // to whatever is selected.
+    body.addEventListener("scroll", () => { if (selectedMedia) positionMediaTools(selectedMedia); });
 
     // ── Title rename via double-click on the title-bar zone ──
     // pos is in the node's local coords; title-bar zone is y < 0
@@ -1132,18 +1221,37 @@ function wireToolbar(toolbar, editor, onChange) {
             const arg = btn.dataset.arg || null;
 
             // ── Custom commands (image / video URL inserts) ──
+            // Save the caret position BEFORE opening the modal — focusing
+            // the modal's <input> moves selection away from the editor,
+            // and editor.focus() afterward would otherwise put the caret
+            // at the start. We restore the cloned range so the inserted
+            // media lands exactly where the user was typing.
+            const savedRange = (() => {
+                const s = window.getSelection();
+                if (s?.rangeCount && editor.contains(s.anchorNode)) {
+                    return s.getRangeAt(0).cloneRange();
+                }
+                return null;
+            })();
+            const restoreSelection = () => {
+                editor.focus();
+                if (savedRange) {
+                    const s = window.getSelection();
+                    s.removeAllRanges();
+                    s.addRange(savedRange);
+                } else {
+                    placeCaretAtEnd(editor);
+                }
+            };
+
             if (cmd === "insertImageURL") {
-                // Image modal supports BOTH paste-URL and pick-local-file.
-                // For local files we read as base64 so the image travels
-                // with the workflow JSON (same approach as page builder).
+                // URL-only for now (local file picker disabled per user request).
                 const src = await openUrlModal({
-                    title: "Insert Image",
+                    title: "Insert Image URL",
                     placeholder: "Paste image URL",
-                    allowFile: true,
-                    fileAccept: "image/*",
                 });
                 if (src) {
-                    editor.focus();
+                    restoreSelection();
                     insertHtmlAtSelection(editor,
                         `<img src="${escapeAttr(src)}" alt="" />`
                     );
@@ -1157,9 +1265,9 @@ function wireToolbar(toolbar, editor, onChange) {
                     placeholder: "Example: https://youtu.be/dQw4w9WgXcQ or https://vimeo.com/123",
                 });
                 if (url) {
-                    editor.focus();
                     const embed = videoUrlToEmbed(url);
                     if (embed) {
+                        restoreSelection();
                         insertHtmlAtSelection(editor, embed);
                         onChange();
                     } else {
@@ -1376,23 +1484,41 @@ function insertHtmlAtSelection(editor, html) {
 }
 
 /**
- * Recognise a YouTube or Vimeo URL and return an iframe-embed snippet.
+ * Recognise a YouTube or Vimeo URL and return a "preview card" embed —
+ * thumbnail + play overlay. The actual iframe loads only when the user
+ * clicks ▶, which:
+ *   • avoids YouTube's "Video unavailable" / referrer policy errors that
+ *     hit on first load from localhost,
+ *   • keeps the workflow snappy (no iframes loading until requested),
+ *   • mirrors the Notion / Slack / Medium embed UX.
  * Returns `null` if the URL doesn't match a known pattern.
  */
 function videoUrlToEmbed(url) {
     if (!url) return null;
     url = url.trim();
-    // YouTube — youtu.be/<id>, youtube.com/watch?v=<id>, youtube.com/embed/<id>, shorts/<id>
+    const playSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
+    // YouTube — youtu.be/<id>, youtube.com/watch?v=<id>, embed/<id>, shorts/<id>
     let m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
     if (m) {
-        const id = m[1];
-        return `<div class="floyo-embed floyo-embed-youtube"><iframe src="https://www.youtube.com/embed/${escapeAttr(id)}" frameborder="0" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture"></iframe></div>`;
+        const id = escapeAttr(m[1]);
+        // hqdefault is the most reliable size that exists for every video.
+        return `<div class="floyo-embed floyo-embed-youtube" data-platform="youtube" data-video-id="${id}" contenteditable="false">
+            <img class="floyo-embed-thumb" src="https://img.youtube.com/vi/${id}/hqdefault.jpg" alt="YouTube video" onerror="this.style.display='none'" />
+            <button type="button" class="floyo-embed-play" data-act="play" aria-label="Play video">${playSvg}</button>
+            <div class="floyo-embed-brand">YouTube</div>
+        </div>`;
     }
     // Vimeo — vimeo.com/<id>, player.vimeo.com/video/<id>
     m = url.match(/(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/);
     if (m) {
-        const id = m[1];
-        return `<div class="floyo-embed floyo-embed-vimeo"><iframe src="https://player.vimeo.com/video/${escapeAttr(id)}" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe></div>`;
+        const id = escapeAttr(m[1]);
+        // vumbnail.com is a free Vimeo-thumbnail proxy; if it fails the
+        // onerror hides the broken img and the dark backdrop remains.
+        return `<div class="floyo-embed floyo-embed-vimeo" data-platform="vimeo" data-video-id="${id}" contenteditable="false">
+            <img class="floyo-embed-thumb" src="https://vumbnail.com/${id}.jpg" alt="Vimeo video" onerror="this.style.display='none'" />
+            <button type="button" class="floyo-embed-play" data-act="play" aria-label="Play video">${playSvg}</button>
+            <div class="floyo-embed-brand">Vimeo</div>
+        </div>`;
     }
     return null;
 }
