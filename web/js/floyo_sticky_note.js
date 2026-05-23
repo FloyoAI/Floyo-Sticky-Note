@@ -1236,7 +1236,10 @@ function setupStickyNote(node) {
     //   2. intercept setSize() and clamp inside it,
     //   3. re-clamp every paint in onDrawForeground.
     const MIN_W = 280, MIN_H = 160;
-    const MAX_W = 800, MAX_H = 700;
+    // Tighter ceiling so the empty state doesn't look enormous. The
+    // user can still drag the resize handle within this range; we just
+    // refuse to let ComfyUI's auto-grow push beyond it.
+    const MAX_W = 720, MAX_H = 460;
     function clampSize() {
         if (!node.size) return false;
         let changed = false;
@@ -1247,7 +1250,7 @@ function setupStickyNote(node) {
         return changed;
     }
     if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
-        node.setSize([460, 280]);
+        node.setSize([420, 240]);
     } else {
         clampSize();
     }
