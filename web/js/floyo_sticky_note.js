@@ -358,13 +358,17 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
 
-/* Floyo full-wordmark logo on the bottom-left. */
+/* Floyo full-wordmark logo on the bottom-left.
+   Per Ashna + Matt's Slack agreement ("Full logo is better - smaller?" /
+   "sure sure"), sized so it sits just slightly taller than the swatches
+   — matches the Figma 902:277 bottom-right variant exactly. */
 .floyo-footer-logo {
-    height: 22px;
+    height: 18px;
     width: auto;
     flex: 0 0 auto;
     user-select: none;
     pointer-events: none;
+    opacity: 0.95;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
 }
 
