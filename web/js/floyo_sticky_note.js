@@ -17,7 +17,7 @@ import { app } from "../../../scripts/app.js";
 
 // Top-level marker — if you don't see this in the browser console then the
 // JS file is not being loaded by ComfyUI at all.
-console.log("[Floyo Sticky Note] module loaded");
+console.log("%c[Floyo Sticky Note] module loaded — build 2026-05-23-resize-debug", "color:#A78BFA;font-weight:700");
 
 /* ─── Asset URLs (resolved relative to this JS file) ──────────────────── */
 //
@@ -938,27 +938,32 @@ function setupStickyNote(node) {
         e.stopPropagation();
         const act = btn.dataset.act;
         if (act === "smaller" || act === "bigger") {
+            const tag = selectedMedia.classList.contains("floyo-embed") ? "embed" : "img";
+            const beforeRect  = selectedMedia.getBoundingClientRect();
+            const beforeNodeY = node.size ? node.size[1] : null;
             const curr = selectedMedia.offsetWidth || 200;
-            // 10% step instead of 20% — smoother / less jumpy.
             const next = act === "bigger" ? curr * 1.1 : curr * 0.9;
-            // Min 120px so the embed doesn't collapse to nothing, max =
-            // body's content width (clientWidth minus left+right padding).
             const maxW = Math.max(160, body.clientWidth - 28);
             const newW = Math.max(120, Math.min(maxW, next));
             selectedMedia.style.width = newW + "px";
-            // Images: let height follow naturally.
-            // Embeds: the CSS rule `aspect-ratio: 16/9` already locks
-            // the height to a 16:9 of whatever width we set — DON'T set
-            // inline style.height here. Forcing both width AND height
-            // inline made the height drift independently of the width
-            // on subsequent clicks (the inline height stayed from a
-            // previous round of rounding).
             if (selectedMedia.tagName === "IMG") {
                 selectedMedia.style.height = "auto";
             } else if (selectedMedia.classList.contains("floyo-embed")) {
                 selectedMedia.style.removeProperty("height");
             }
-            requestAnimationFrame(() => positionMediaTools(selectedMedia));
+            requestAnimationFrame(() => {
+                positionMediaTools(selectedMedia);
+                const afterRect  = selectedMedia.getBoundingClientRect();
+                console.log("%c[Floyo resize]", "color:#FBBF24;font-weight:700", {
+                    tag, act,
+                    before:  { w: Math.round(beforeRect.width),  h: Math.round(beforeRect.height) },
+                    setWidth: newW,
+                    after:   { w: Math.round(afterRect.width),   h: Math.round(afterRect.height) },
+                    bodyClientW: body.clientWidth,
+                    nodeSizeBefore: beforeNodeY,
+                    nodeSizeAfter:  node.size ? node.size[1] : null,
+                });
+            });
         } else if (act === "delete") {
             const el = selectedMedia;
             selectMedia(null);
