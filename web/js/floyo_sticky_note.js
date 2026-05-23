@@ -349,7 +349,13 @@ const STYLES = `
 .floyo-embed {
     position: relative;
     width: 100%;
-    padding-bottom: 56.25%;   /* 16:9 aspect ratio */
+    max-width: 100%;
+    /* aspect-ratio computes height from the embed's OWN width — so when
+       the user resizes the embed via [−]/[+] the height tracks the new
+       width and there's no stale empty space below the player.
+       padding-bottom hack would compute against the body width and
+       leave a 16:9-of-body gap below a shrunken video. */
+    aspect-ratio: 16 / 9;
     margin: 8px 0;
     border-radius: 10px;
     overflow: hidden;
@@ -817,8 +823,8 @@ function setupStickyNote(node) {
     // Click an <img> or .floyo-embed (video card) inside the editor →
     // outline it and float a mini toolbar above with [−] [+] [×] buttons.
     // Same UI for both media types.
-    let selectedMedia = null;     // the actual element (img or embed div)
-    let hoveredMedia  = null;     // for hover-only display
+    let selectedMedia = null;     // sticky selection (outline + toolbar)
+    let hoveredMedia  = null;     // transient hover (toolbar position only)
 
     function positionMediaTools(el) {
         if (!el) return;
@@ -831,27 +837,31 @@ function setupStickyNote(node) {
         imgTools.style.left = (eRect.right - bRect.left - imgTools.offsetWidth - PAD + body.scrollLeft) + "px";
         imgTools.style.top  = (eRect.top   - bRect.top  + PAD + body.scrollTop) + "px";
     }
-    function showTools(el, sticky) {
-        // sticky=true means selected (toolbar stays); false means hover-only.
-        if (selectedMedia && selectedMedia !== el) selectedMedia.classList.remove("is-selected");
-        if (sticky) {
-            selectedMedia = el;
-            if (el) el.classList.add("is-selected");
-        }
+    // The toolbar should follow whichever media is currently most-
+    // relevant: HOVER beats SELECTION, because the user is mousing
+    // over a fresh element with the intent to act on it.
+    function activeMedia() {
+        return hoveredMedia || selectedMedia;
+    }
+    function refreshTools() {
+        const el = activeMedia();
         if (el) {
             imgTools.classList.add("is-visible");
             requestAnimationFrame(() => positionMediaTools(el));
+        } else {
+            imgTools.classList.remove("is-visible");
         }
     }
-    function hideTools() {
-        if (selectedMedia) selectedMedia.classList.remove("is-selected");
-        selectedMedia = null;
-        hoveredMedia = null;
-        imgTools.classList.remove("is-visible");
-    }
-    // Backwards-compat alias used by the existing wiring below.
     function selectMedia(el) {
-        if (el) showTools(el, true); else hideTools();
+        if (selectedMedia && selectedMedia !== el) selectedMedia.classList.remove("is-selected");
+        selectedMedia = el;
+        if (el) el.classList.add("is-selected");
+        refreshTools();
+    }
+    function hoverMedia(el) {
+        if (el === hoveredMedia) return;
+        hoveredMedia = el;
+        refreshTools();
     }
     function mediaTarget(target) {
         // Returns the img / .floyo-embed ancestor (the thing we treat as
@@ -917,22 +927,17 @@ function setupStickyNote(node) {
     // Reposition the mini-toolbar when the body scrolls so it sticks
     // to whatever is selected.
     body.addEventListener("scroll", () => {
-        if (selectedMedia) positionMediaTools(selectedMedia);
-        else if (hoveredMedia) positionMediaTools(hoveredMedia);
+        const el = activeMedia();
+        if (el) positionMediaTools(el);
     });
 
-    // Hover → tools appear (non-sticky). Move out → if not selected, hide.
+    // Hover → toolbar follows mouse to whatever media is being hovered,
+    // even if a different media is currently selected. Selection only
+    // controls the OUTLINE; hover wins for toolbar position.
     editor.addEventListener("mousemove", (e) => {
-        const m = mediaTarget(e.target);
-        if (m === hoveredMedia) return;
-        hoveredMedia = m;
-        if (m && !selectedMedia) showTools(m, false);
-        else if (!selectedMedia)  imgTools.classList.remove("is-visible");
+        hoverMedia(mediaTarget(e.target));
     });
-    editor.addEventListener("mouseleave", () => {
-        hoveredMedia = null;
-        if (!selectedMedia) imgTools.classList.remove("is-visible");
-    });
+    editor.addEventListener("mouseleave", () => hoverMedia(null));
 
     // ── Title rename + enter-editor via LiteGraph-canvas double-click ──
     // pos is in the node's local coords; title-bar zone is y < 0.
