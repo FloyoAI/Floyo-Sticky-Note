@@ -164,9 +164,13 @@ const STYLES = `
     flex: 0 0 auto;
     display: none;
     align-items: center;
-    flex-wrap: wrap;          /* still wraps if user shrinks the node */
+    justify-content: space-between;   /* spread items across the full
+                                         width so the panel stops looking
+                                         left-aligned with empty space on
+                                         the right */
+    flex-wrap: wrap;
     gap: 1px;
-    padding: 5px 8px;
+    padding: 5px 10px;
     background: var(--toolbar);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid rgba(0, 0, 0, 0.22);
