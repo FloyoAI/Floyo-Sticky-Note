@@ -802,17 +802,39 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Widget claims the node body (node.size[1] − title), so the wrapper
-    // can fill the chrome cleanly. The floor is intentionally tiny (60)
-    // so dragging the resize handle up actually shrinks the node — a
-    // larger floor would make LiteGraph snap it back. The shrink/grow
-    // tug-of-war was actually about the FLOOR being too high (160), not
-    // about referencing node.size.
-    widget.computeSize = function () {
-        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        if (!node.size) return [460, 200];
-        return [node.size[0], Math.max(60, node.size[1] - titleH)];
+    // Widget tells LiteGraph "I take zero space" — [0, -4] is the
+    // convention for "skip me in layout calculations". Combined with
+    // the node.computeSize override below, this stops every feedback
+    // loop between widget size and node size.
+    widget.computeSize = function () { return [0, -4]; };
+
+    // The node's OWN computeSize is what LiteGraph uses for auto-resize
+    // decisions when widgets are added/removed or content overflows.
+    // We pin it to the current node.size — so LiteGraph can never
+    // "grow" the node beyond whatever the user has set via the drag
+    // handle. The user drag handle directly mutates node.size, which
+    // is honoured. Anything else (content overflow, widget add, etc.)
+    // is ignored.
+    node.computeSize = function () {
+        return node.size ? [node.size[0], node.size[1]] : [420, 240];
     };
+
+    // Force the wrapper to fill the node body exactly. Since the widget
+    // claims [0, -4], the DOM container ComfyUI creates is essentially
+    // collapsed; we position the wrapper absolutely inside it and size
+    // it from node.size on every paint.
+    function syncWrapperSize() {
+        if (!node.size) return;
+        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+        wrapper.style.position = "absolute";
+        wrapper.style.left = "0";
+        wrapper.style.top = "0";
+        wrapper.style.width  = node.size[0] + "px";
+        wrapper.style.height = (node.size[1] - titleH) + "px";
+        const parent = wrapper.parentElement;
+        if (parent) parent.style.overflow = "visible";
+    }
+    queueMicrotask(syncWrapperSize);
 
     // ── Mode helpers ──
     function enterEditor() {
@@ -1286,6 +1308,7 @@ function setupStickyNote(node) {
     const onDrawForegroundClamp = node.onDrawForeground;
     node.onDrawForeground = function () {
         clampSize();
+        syncWrapperSize();
         return onDrawForegroundClamp?.apply(this, arguments);
     };
 
