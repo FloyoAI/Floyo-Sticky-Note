@@ -1236,10 +1236,13 @@ function setupStickyNote(node) {
     //   2. intercept setSize() and clamp inside it,
     //   3. re-clamp every paint in onDrawForeground.
     const MIN_W = 280, MIN_H = 160;
-    // Tighter ceiling so the empty state doesn't look enormous. The
-    // user can still drag the resize handle within this range; we just
-    // refuse to let ComfyUI's auto-grow push beyond it.
-    const MAX_W = 720, MAX_H = 460;
+    // Generous ceiling: the user must be able to resize the note as
+    // tall / wide as their content needs. The cap exists only to stop
+    // a runaway feedback loop from making the node fill the whole
+    // canvas (which is what happened before the embed-resize fix).
+    // 1600×1200 is plenty of practical room for the manual resize
+    // handle without letting the node turn into a wall.
+    const MAX_W = 1600, MAX_H = 1200;
     function clampSize() {
         if (!node.size) return false;
         let changed = false;
