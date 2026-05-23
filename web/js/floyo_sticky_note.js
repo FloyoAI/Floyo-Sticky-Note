@@ -438,11 +438,13 @@ const STYLES = `
     flex: 0 0 auto;
     display: none;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
+    justify-content: space-between;  /* logo left, center cluster mid,
+                                        save right */
+    gap: 8px;
+    padding: 7px 12px;
     background: var(--toolbar);
     border-top: 1px solid rgba(0, 0, 0, 0.22);
-    min-height: 42px;
+    min-height: 40px;
     box-sizing: border-box;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
@@ -461,14 +463,14 @@ const STYLES = `
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
 }
 
-/* Center cluster — swatches + font dropdown — fills the available
-   space so the logo sits left and the compass + save sit right. */
+/* Center cluster — swatches + font + compass packed together.
+   flex: 0 0 auto so the cluster stays its natural width; the footer's
+   space-between drops it in the middle between the logo and save. */
 .floyo-footer-center {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex: 1 1 auto;
-    justify-content: center;
+    gap: 8px;
+    flex: 0 0 auto;
 }
 
 .floyo-footer-pointer {
@@ -1080,8 +1082,11 @@ function setupStickyNote(node) {
         ctx.save();
         // Use the header colour for BOTH fill and stroke — the notch
         // blends with the title bar with no separating outline.
-        ctx.fillStyle   = t.header;
-        ctx.strokeStyle = t.header;
+        // Use the body's bg colour so the notch reads as part of the
+        // node's main mass (Ritik: "node ka jo bhi colour hoga, wo arrow
+        // ka colour"). Header purple was too light vs. the dark body.
+        ctx.fillStyle   = t.bg;
+        ctx.strokeStyle = t.bg;
         ctx.lineWidth = 1;
         ctx.lineJoin = "round";
         ctx.beginPath();
@@ -1557,11 +1562,10 @@ function createFooter() {
     });
     center.appendChild(fontSel);
 
-    footer.appendChild(center);
-
-    // ── Pointer-direction compass (right of center, left of save) ──
-    // Click an arrow → a triangular notch appears on that edge of the
-    // node, indicating what the note is correlating to on the canvas.
+    // ── Pointer-direction compass — inside the center cluster ──
+    // Moved inside the center so all the "middle" controls stay tightly
+    // grouped instead of one being pushed against the save button. Click
+    // an arrow → a triangular notch on that edge of the node.
     const pointer = document.createElement("div");
     pointer.className = "floyo-footer-pointer";
     pointer.title = "Pick a side for the node to point from";
@@ -1571,7 +1575,9 @@ function createFooter() {
         <path class="floyo-pointer-arrow" data-dir="left"  d="M2 12 L6 8.5 L6 10.8 L10.8 10.8 L10.8 13.2 L6 13.2 L6 15.5 Z"/>
         <path class="floyo-pointer-arrow" data-dir="right" d="M22 12 L18 15.5 L18 13.2 L13.2 13.2 L13.2 10.8 L18 10.8 L18 8.5 Z"/>
     </svg>`;
-    footer.appendChild(pointer);
+    center.appendChild(pointer);
+
+    footer.appendChild(center);
 
     // ── Save button (far right) ──
     const save = document.createElement("button");
