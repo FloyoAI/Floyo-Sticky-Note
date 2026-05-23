@@ -1229,21 +1229,47 @@ function setupStickyNote(node) {
     };
     document.addEventListener("mousedown", outsideHandler);
 
-    // ── Initial sizing ──
-    // Default fits the toolbar in one row and looks compact like the
-    // Figma reference. Also CLAMP any saved-state size that came from a
-    // previous version where the node was exploding — anything wider
-    // than 800 or taller than 700 gets snapped back to a sane size.
+    // ── Initial sizing + continuous clamp ──
+    // ComfyUI's DOM widget layout sometimes mutates node.size[] directly
+    // (not via setSize), so a one-shot clamp here isn't enough. We:
+    //   1. set a sane default,
+    //   2. intercept setSize() and clamp inside it,
+    //   3. re-clamp every paint in onDrawForeground.
     const MIN_W = 280, MIN_H = 160;
     const MAX_W = 800, MAX_H = 700;
+    function clampSize() {
+        if (!node.size) return false;
+        let changed = false;
+        if (node.size[0] > MAX_W) { node.size[0] = MAX_W; changed = true; }
+        if (node.size[1] > MAX_H) { node.size[1] = MAX_H; changed = true; }
+        if (node.size[0] < MIN_W) { node.size[0] = MIN_W; changed = true; }
+        if (node.size[1] < MIN_H) { node.size[1] = MIN_H; changed = true; }
+        return changed;
+    }
     if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
         node.setSize([460, 280]);
-    } else if (node.size[0] > MAX_W || node.size[1] > MAX_H) {
-        node.setSize([
-            Math.min(node.size[0], MAX_W),
-            Math.min(node.size[1], MAX_H),
-        ]);
+    } else {
+        clampSize();
     }
+    // Continuous clamp — runs on every canvas redraw (cheap; just an
+    // array comparison). Catches direct mutations of node.size[] that
+    // ComfyUI's auto-resize might do behind setSize's back. No need to
+    // setDirtyCanvas — we're already inside a draw pass, and the next
+    // frame naturally picks up the new size.
+    const onDrawForegroundClamp = node.onDrawForeground;
+    node.onDrawForeground = function () {
+        clampSize();
+        return onDrawForegroundClamp?.apply(this, arguments);
+    };
+
+    // Also intercept setSize itself — anything that explicitly calls
+    // node.setSize(big) gets clamped before LiteGraph stores it.
+    const origSetSize = node.setSize.bind(node);
+    node.setSize = function (size) {
+        const w = Math.max(MIN_W, Math.min(MAX_W, size[0]));
+        const h = Math.max(MIN_H, Math.min(MAX_H, size[1]));
+        return origSetSize([w, h]);
+    };
 
     // ── Persistence: onSerialize / onConfigure ──
     // Keep node.title in sync with our stored title (the user can rename
