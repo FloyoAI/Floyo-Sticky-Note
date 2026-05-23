@@ -802,14 +802,17 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Widget contributes only a small constant to LiteGraph's layout —
-    // we DON'T derive from node.size, because that creates a tug-of-war
-    // with LiteGraph's own resize-handle logic (when the user tries to
-    // shrink the node, our computeSize echoes the previous larger size
-    // and LiteGraph treats it as the minimum, so the node "bounces"
-    // back up). The DOM container fills the available node body anyway
-    // — computeSize is just LiteGraph's hint for vertical layout.
-    widget.computeSize = function () { return [220, 80]; };
+    // Widget claims the node body (node.size[1] − title), so the wrapper
+    // can fill the chrome cleanly. The floor is intentionally tiny (60)
+    // so dragging the resize handle up actually shrinks the node — a
+    // larger floor would make LiteGraph snap it back. The shrink/grow
+    // tug-of-war was actually about the FLOOR being too high (160), not
+    // about referencing node.size.
+    widget.computeSize = function () {
+        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+        if (!node.size) return [460, 200];
+        return [node.size[0], Math.max(60, node.size[1] - titleH)];
+    };
 
     // ── Mode helpers ──
     function enterEditor() {
