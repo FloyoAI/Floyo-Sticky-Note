@@ -164,9 +164,9 @@ const STYLES = `
     flex: 0 0 auto;
     display: none;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 6px 8px;
+    flex-wrap: wrap;          /* still wraps if user shrinks the node */
+    gap: 1px;
+    padding: 5px 8px;
     background: var(--toolbar);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid rgba(0, 0, 0, 0.22);
@@ -176,12 +176,12 @@ const STYLES = `
     background: transparent;
     color: var(--text);
     border: 1px solid transparent;
-    border-radius: 6px;
-    height: 26px;
-    min-width: 28px;
-    padding: 0 6px;
+    border-radius: 5px;
+    height: 24px;
+    min-width: 22px;          /* tighter so all 13 buttons fit on one line */
+    padding: 0 4px;
     font: inherit;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
@@ -204,9 +204,9 @@ const STYLES = `
 .floyo-tool-btn.tool-strike    { text-decoration: line-through; }
 .floyo-tool-sep {
     width: 1px;
-    height: 16px;
+    height: 14px;
     background: rgba(255, 255, 255, 0.18);
-    margin: 0 4px;
+    margin: 0 3px;
 }
 
 /* ── Body (display + editor share this slot) ── */
@@ -282,7 +282,52 @@ const STYLES = `
     display: block;
     margin: 8px 0;
     background: rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: outline 120ms ease, transform 120ms ease;
 }
+.floyo-sticky-body img.is-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    transform: scale(1);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Floating tools next to a selected image: [−] [+] [×]. */
+.floyo-img-tools {
+    position: absolute;
+    display: none;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(15, 8, 32, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    user-select: none;
+}
+.floyo-img-tools.is-visible { display: flex; }
+.floyo-img-tool-btn {
+    width: 26px;
+    height: 26px;
+    background: rgba(255, 255, 255, 0.10);
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.floyo-img-tool-btn:hover  { background: rgba(255, 255, 255, 0.20); }
+.floyo-img-tool-btn:active { transform: scale(0.94); }
+.floyo-img-tool-delete { color: #FCA5A5; }
+.floyo-img-tool-delete:hover { background: rgba(248, 113, 113, 0.25); color: #FCA5A5; }
 .floyo-embed {
     position: relative;
     width: 100%;
@@ -613,7 +658,18 @@ function setupStickyNote(node) {
     editor.contentEditable = "true";
     editor.spellcheck = false;
     editor.innerHTML = node.properties.content;
-    body.append(display, editor);
+
+    // Floating mini-toolbar that appears next to a selected image
+    // ([−] shrink, [+] enlarge, [×] delete).
+    const imgTools = document.createElement("div");
+    imgTools.className = "floyo-img-tools";
+    imgTools.innerHTML = `
+        <button type="button" class="floyo-img-tool-btn" data-act="smaller" title="Make smaller">−</button>
+        <button type="button" class="floyo-img-tool-btn" data-act="bigger"  title="Make bigger">+</button>
+        <button type="button" class="floyo-img-tool-btn floyo-img-tool-delete" data-act="delete" title="Delete image">×</button>
+    `;
+
+    body.append(display, editor, imgTools);
 
     // Footer (visible only in editor mode)
     const footer = createFooter();
@@ -625,11 +681,17 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Report a fixed minimum size — don't echo back `node.size[1]` which
-    // creates a feedback loop where the node enlarges on every layout
-    // pass. ComfyUI will stretch the DOM widget to fill whatever the user
-    // has manually resized the node to.
-    widget.computeSize = function () { return [0, 0]; };
+    // Report widget = (current node height) − title-bar height. This is
+    // STABLE (no feedback loop): LiteGraph computes total = title + body
+    // = title + (node.size[1] − title) = node.size[1]. Returning [0, 0]
+    // tempts ComfyUI to skip sizing the container which lets the wrapper
+    // overflow below the node bounds — that's the "footer outside the
+    // node" glitch.
+    widget.computeSize = function () {
+        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+        const wanted = (node.size?.[1] ?? 360) - titleH;
+        return [node.size?.[0] ?? 480, Math.max(wanted, 120)];
+    };
 
     // ── Mode helpers ──
     function enterEditor() {
@@ -657,6 +719,64 @@ function setupStickyNote(node) {
         e.stopPropagation();
         enterEditor();
     });
+
+    // ── Image selection + resize + delete ──
+    // Click an <img> inside the editor → outline it and float a mini
+    // toolbar above it with [−] [+] [×] buttons.
+    let selectedImg = null;
+    function positionImgTools(img) {
+        if (!img) return;
+        // Position relative to the body (body is position: relative).
+        const bRect = body.getBoundingClientRect();
+        const iRect = img.getBoundingClientRect();
+        // Place above the image's top-right corner, but flip below if
+        // there's not enough room.
+        imgTools.style.left = (iRect.right - bRect.left - imgTools.offsetWidth) + "px";
+        const above = iRect.top - bRect.top - imgTools.offsetHeight - 6 + body.scrollTop;
+        imgTools.style.top = (above < 4 ? (iRect.top - bRect.top + 6 + body.scrollTop) : above) + "px";
+    }
+    function selectImg(img) {
+        if (selectedImg) selectedImg.classList.remove("is-selected");
+        selectedImg = img;
+        if (img) {
+            img.classList.add("is-selected");
+            imgTools.classList.add("is-visible");
+            // Position after the next paint so offsetWidth is accurate.
+            requestAnimationFrame(() => positionImgTools(img));
+        } else {
+            imgTools.classList.remove("is-visible");
+        }
+    }
+    editor.addEventListener("click", (e) => {
+        if (e.target.tagName === "IMG" && editor.contains(e.target)) {
+            e.preventDefault();
+            selectImg(e.target);
+        } else if (!imgTools.contains(e.target)) {
+            selectImg(null);
+        }
+    });
+    imgTools.addEventListener("mousedown", (e) => e.preventDefault());
+    imgTools.addEventListener("click", (e) => {
+        const btn = e.target.closest(".floyo-img-tool-btn");
+        if (!btn || !selectedImg) return;
+        e.stopPropagation();
+        const act = btn.dataset.act;
+        if (act === "smaller" || act === "bigger") {
+            const curr = selectedImg.offsetWidth || 200;
+            const next = act === "bigger" ? curr * 1.2 : curr * 0.8;
+            const maxW = body.clientWidth - 28;          // body padding margin
+            selectedImg.style.width = Math.max(60, Math.min(maxW, next)) + "px";
+            selectedImg.style.height = "auto";
+            requestAnimationFrame(() => positionImgTools(selectedImg));
+        } else if (act === "delete") {
+            const img = selectedImg;
+            selectImg(null);
+            img.remove();
+        }
+        syncContent();
+    });
+    // Reposition the mini-toolbar when the body scrolls.
+    body.addEventListener("scroll", () => { if (selectedImg) positionImgTools(selectedImg); });
 
     // ── Title rename via double-click on the title-bar zone ──
     // pos is in the node's local coords; title-bar zone is y < 0
@@ -878,8 +998,10 @@ function setupStickyNote(node) {
     document.addEventListener("mousedown", outsideHandler);
 
     // ── Initial sizing ──
+    // Default width is wide enough that the full 13-button toolbar fits
+    // on a single line — anything narrower wraps to a 2nd row.
     if (!node.size || (node.size[0] < 220 || node.size[1] < 80)) {
-        node.setSize([320, 300]);
+        node.setSize([460, 340]);
     }
 
     // ── Persistence: onSerialize / onConfigure ──
