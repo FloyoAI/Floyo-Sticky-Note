@@ -802,25 +802,22 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Widget claims node.size[1] − title bar — fills the whole body so
-    // the in-DOM footer hugs the actual node bottom instead of floating
-    // in the middle with empty purple below it.
-    // (Stable: total = title + (size[1] − title) = size[1]. Previous
-    //  "explosion" turned out to be the inline width+height drift on
-    //  embed resizes, not computeSize itself.)
-    widget.computeSize = function () {
-        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        const w = (node.size && node.size[0]) || 460;
-        const h = Math.max(160, ((node.size && node.size[1]) || 340) - titleH);
-        return [w, h];
-    };
+    // Widget contributes only a small constant to LiteGraph's layout —
+    // we DON'T derive from node.size, because that creates a tug-of-war
+    // with LiteGraph's own resize-handle logic (when the user tries to
+    // shrink the node, our computeSize echoes the previous larger size
+    // and LiteGraph treats it as the minimum, so the node "bounces"
+    // back up). The DOM container fills the available node body anyway
+    // — computeSize is just LiteGraph's hint for vertical layout.
+    widget.computeSize = function () { return [220, 80]; };
 
     // ── Mode helpers ──
     function enterEditor() {
         wrapper.dataset.mode = "editor";
         editor.innerHTML = display.innerHTML;
-        // Ensure enough height for toolbar + footer
-        if (node.size[1] < 320) node.setSize([Math.max(node.size[0], 360), 480]);
+        // No auto-grow here — the user can manually resize if they need
+        // more room. Auto-setSize() was being read by the user as the
+        // node "growing on its own" when they entered editor mode.
         node.setDirtyCanvas(true, true);
         setTimeout(() => {
             editor.focus();
@@ -1235,7 +1232,9 @@ function setupStickyNote(node) {
     //   1. set a sane default,
     //   2. intercept setSize() and clamp inside it,
     //   3. re-clamp every paint in onDrawForeground.
-    const MIN_W = 280, MIN_H = 160;
+    // Min: just enough that the title bar + a bit of body is visible.
+    // Max: a generous sanity cap to catch true runaways.
+    const MIN_W = 240, MIN_H = 80;
     const MAX_W = 1600, MAX_H = 1200;
 
     // ── Debug: trace every node.size change so we can see WHO is
