@@ -1230,10 +1230,19 @@ function setupStickyNote(node) {
     document.addEventListener("mousedown", outsideHandler);
 
     // ── Initial sizing ──
-    // Default width is wide enough that the full 13-button toolbar fits
-    // on a single line — anything narrower wraps to a 2nd row.
-    if (!node.size || (node.size[0] < 220 || node.size[1] < 80)) {
-        node.setSize([460, 340]);
+    // Default fits the toolbar in one row and looks compact like the
+    // Figma reference. Also CLAMP any saved-state size that came from a
+    // previous version where the node was exploding — anything wider
+    // than 800 or taller than 700 gets snapped back to a sane size.
+    const MIN_W = 280, MIN_H = 160;
+    const MAX_W = 800, MAX_H = 700;
+    if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
+        node.setSize([460, 280]);
+    } else if (node.size[0] > MAX_W || node.size[1] > MAX_H) {
+        node.setSize([
+            Math.min(node.size[0], MAX_W),
+            Math.min(node.size[1], MAX_H),
+        ]);
     }
 
     // ── Persistence: onSerialize / onConfigure ──
@@ -1253,6 +1262,14 @@ function setupStickyNote(node) {
     const onConfigure = node.onConfigure;
     node.onConfigure = function (o) {
         onConfigure?.apply(this, arguments);
+        // Clamp legacy oversized node.size from saved workflows where
+        // the node had exploded under an earlier version of this code.
+        if (node.size && (node.size[0] > MAX_W || node.size[1] > MAX_H)) {
+            node.setSize([
+                Math.min(node.size[0], MAX_W),
+                Math.min(node.size[1], MAX_H),
+            ]);
+        }
         const s = o.floyo_state;
         if (!s) return;
         Object.assign(node.properties, s);
