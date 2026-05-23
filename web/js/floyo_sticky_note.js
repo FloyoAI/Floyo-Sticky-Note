@@ -676,6 +676,20 @@ app.registerExtension({
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
+            // ── BULLET-PROOF: apply the purple chrome theme IMMEDIATELY,
+            //    before anything else can throw. Even if setupStickyNote
+            //    blows up, the node will at least look right.
+            try {
+                const t = THEMES.purple;
+                this.color    = t.header;
+                this.bgcolor  = t.bg;
+                this.boxcolor = t.border;
+                // Suppress LiteGraph's native title text. We draw our own
+                // in Arcade font inside onDrawForeground (set up later).
+                this.title = "";
+                this.getTitle = function () { return ""; };
+            } catch (e) { console.warn("[Floyo Sticky Note] early theme failed:", e); }
+
             const r = onNodeCreated?.apply(this, arguments);
             try {
                 console.log("[Floyo Sticky Note] onNodeCreated — setting up widget");
@@ -683,6 +697,16 @@ app.registerExtension({
                 console.log("[Floyo Sticky Note] setup complete");
             } catch (err) {
                 console.error("[Floyo Sticky Note] setup failed:", err);
+                // Surface the error visibly inside the node so the user
+                // doesn't just see a blank box.
+                try {
+                    const errBox = document.createElement("div");
+                    errBox.style.cssText =
+                        "padding:12px;color:#FECACA;font:13px monospace;" +
+                        "background:rgba(0,0,0,0.4);border-radius:8px;";
+                    errBox.textContent = "Floyo Sticky Note setup error:\n" + (err?.stack || err?.message || String(err));
+                    this.addDOMWidget?.("floyo_err", "div", errBox, { serialize: false });
+                } catch {}
             }
             return r;
         };
