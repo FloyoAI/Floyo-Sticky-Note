@@ -440,11 +440,11 @@ const STYLES = `
     align-items: center;
     justify-content: space-between;  /* logo left, center cluster mid,
                                         save right */
-    gap: 8px;
-    padding: 7px 12px;
+    gap: 12px;
+    padding: 4px 12px;          /* reduced top/bottom — tighter to body */
     background: var(--toolbar);
     border-top: 1px solid rgba(0, 0, 0, 0.22);
-    min-height: 40px;
+    min-height: 36px;
     box-sizing: border-box;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
@@ -475,21 +475,27 @@ const STYLES = `
 
 .floyo-footer-pointer {
     color: var(--text-mute);
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
     flex: 0 0 auto;
 }
-.floyo-pointer-svg { display: block; width: 24px; height: 24px; }
+.floyo-pointer-svg { display: block; width: 28px; height: 28px; }
 .floyo-pointer-arrow {
     fill: var(--text-mute);
-    opacity: 0.65;
+    opacity: 0.7;
     cursor: pointer;
     transition: fill 120ms ease, opacity 120ms ease, transform 120ms ease;
     transform-origin: 12px 12px;
+    /* Larger interactive padding around each arrow path so the click
+       target is comfortable even though the visual is small. */
+    stroke: transparent;
+    stroke-width: 4;
+    paint-order: stroke fill;
+    pointer-events: all;
 }
 .floyo-pointer-arrow:hover {
     fill: var(--accent);
@@ -1076,8 +1082,8 @@ function setupStickyNote(node) {
         // visually merges with the title bar / body — no visible seam.
         const dir = node.properties.pointerDir;
         if (!dir) return;
-        const base  = 38;   // wider base = beefier notch
-        const reach = 22;   // taller protrusion
+        const base  = 56;   // beefier notch — another +50% per Ritik
+        const reach = 32;   // taller protrusion
         const overlap = 2;  // px the base sinks INTO the chrome
         ctx.save();
         // Use the header colour for BOTH fill and stroke — the notch
@@ -1562,22 +1568,22 @@ function createFooter() {
     });
     center.appendChild(fontSel);
 
-    // ── Pointer-direction compass — inside the center cluster ──
-    // Moved inside the center so all the "middle" controls stay tightly
-    // grouped instead of one being pushed against the save button. Click
-    // an arrow → a triangular notch on that edge of the node.
+    footer.appendChild(center);
+
+    // ── Pointer-direction compass ──
+    // BETWEEN center cluster and save button — gives the dropdown
+    // breathing room on its right (Ritik: "default button se aur right
+    // side me"). Bigger clickable area too.
     const pointer = document.createElement("div");
     pointer.className = "floyo-footer-pointer";
     pointer.title = "Pick a side for the node to point from";
-    pointer.innerHTML = `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="floyo-pointer-svg">
+    pointer.innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" class="floyo-pointer-svg">
         <path class="floyo-pointer-arrow" data-dir="up"    d="M12 2 L8.5 6 L10.8 6 L10.8 10.8 L13.2 10.8 L13.2 6 L15.5 6 Z"/>
         <path class="floyo-pointer-arrow" data-dir="down"  d="M12 22 L15.5 18 L13.2 18 L13.2 13.2 L10.8 13.2 L10.8 18 L8.5 18 Z"/>
         <path class="floyo-pointer-arrow" data-dir="left"  d="M2 12 L6 8.5 L6 10.8 L10.8 10.8 L10.8 13.2 L6 13.2 L6 15.5 Z"/>
         <path class="floyo-pointer-arrow" data-dir="right" d="M22 12 L18 15.5 L18 13.2 L13.2 13.2 L13.2 10.8 L18 10.8 L18 8.5 Z"/>
     </svg>`;
-    center.appendChild(pointer);
-
-    footer.appendChild(center);
+    footer.appendChild(pointer);
 
     // ── Save button (far right) ──
     const save = document.createElement("button");
