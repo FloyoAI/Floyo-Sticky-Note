@@ -350,12 +350,13 @@ const STYLES = `
     position: relative;
     width: 100%;
     max-width: 100%;
-    /* aspect-ratio computes height from the embed's OWN width — so when
-       the user resizes the embed via [−]/[+] the height tracks the new
-       width and there's no stale empty space below the player.
-       padding-bottom hack would compute against the body width and
-       leave a 16:9-of-body gap below a shrunken video. */
+    /* Default 16:9 via aspect-ratio when no inline height is set.
+       The resize handler in JS ALSO sets `style.height` explicitly
+       (width * 9/16) when the user clicks [−]/[+] so we never depend
+       solely on aspect-ratio — that property has bug history when all
+       children are position:absolute. Both belt + suspenders. */
     aspect-ratio: 16 / 9;
+    height: auto;
     margin: 8px 0;
     border-radius: 10px;
     overflow: hidden;
@@ -363,6 +364,7 @@ const STYLES = `
     background: var(--code-bg);
     cursor: pointer;
     transition: outline 120ms ease, box-shadow 120ms ease;
+    box-sizing: border-box;
 }
 .floyo-embed.is-selected {
     outline: 2px solid var(--accent);
@@ -913,9 +915,21 @@ function setupStickyNote(node) {
         if (act === "smaller" || act === "bigger") {
             const curr = selectedMedia.offsetWidth || 200;
             const next = act === "bigger" ? curr * 1.2 : curr * 0.8;
+            // Min 80px, max = body content width.
             const maxW = body.clientWidth - 28;
-            selectedMedia.style.width = Math.max(80, Math.min(maxW, next)) + "px";
-            if (selectedMedia.tagName === "IMG") selectedMedia.style.height = "auto";
+            const newW = Math.max(80, Math.min(maxW, next));
+            selectedMedia.style.width = newW + "px";
+            // Lock the height too. For images we just let the natural
+            // aspect ratio decide via `height: auto`; for video embeds
+            // we set an explicit 16:9 height so the box doesn't rely
+            // on CSS aspect-ratio support (was a known Chrome quirk
+            // when children are all position:absolute) and there's
+            // no chance of an empty gap below the iframe.
+            if (selectedMedia.tagName === "IMG") {
+                selectedMedia.style.height = "auto";
+            } else if (selectedMedia.classList.contains("floyo-embed")) {
+                selectedMedia.style.height = Math.round(newW * 9 / 16) + "px";
+            }
             requestAnimationFrame(() => positionMediaTools(selectedMedia));
         } else if (act === "delete") {
             const el = selectedMedia;
