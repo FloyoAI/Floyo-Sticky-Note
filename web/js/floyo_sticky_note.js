@@ -941,7 +941,9 @@ function setupStickyNote(node) {
         if (act === "smaller" || act === "bigger") {
             const tag = selectedMedia.classList.contains("floyo-embed") ? "embed" : "img";
             const beforeRect  = selectedMedia.getBoundingClientRect();
-            const beforeNodeY = node.size ? node.size[1] : null;
+            // Snapshot the node size BEFORE the resize. If anything grows
+            // the node as a side-effect, we'll snap it back.
+            const lockedSize = node.size ? [...node.size] : null;
             const curr = selectedMedia.offsetWidth || 200;
             const next = act === "bigger" ? curr * 1.1 : curr * 0.9;
             const maxW = Math.max(160, body.clientWidth - 28);
@@ -952,19 +954,32 @@ function setupStickyNote(node) {
             } else if (selectedMedia.classList.contains("floyo-embed")) {
                 selectedMedia.style.removeProperty("height");
             }
+            // Forcibly preserve the node's size — defeats any ComfyUI
+            // auto-grow that reacts to taller DOM content.
+            const restoreNodeSize = () => {
+                if (lockedSize && node.size &&
+                    (node.size[0] !== lockedSize[0] || node.size[1] !== lockedSize[1])) {
+                    node.setSize(lockedSize);
+                    node.setDirtyCanvas(true, true);
+                }
+            };
             requestAnimationFrame(() => {
+                restoreNodeSize();
                 positionMediaTools(selectedMedia);
-                const afterRect  = selectedMedia.getBoundingClientRect();
+                const afterRect = selectedMedia.getBoundingClientRect();
                 console.log("%c[Floyo resize]", "color:#FBBF24;font-weight:700", {
                     tag, act,
                     before:  { w: Math.round(beforeRect.width),  h: Math.round(beforeRect.height) },
                     setWidth: newW,
                     after:   { w: Math.round(afterRect.width),   h: Math.round(afterRect.height) },
                     bodyClientW: body.clientWidth,
-                    nodeSizeBefore: beforeNodeY,
+                    nodeSizeLocked: lockedSize ? lockedSize[1] : null,
                     nodeSizeAfter:  node.size ? node.size[1] : null,
                 });
             });
+            // One more snap-back on the NEXT frame in case ComfyUI
+            // re-runs its own layout after ours.
+            setTimeout(restoreNodeSize, 16);
         } else if (act === "delete") {
             const el = selectedMedia;
             selectMedia(null);
