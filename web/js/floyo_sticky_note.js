@@ -939,21 +939,24 @@ function setupStickyNote(node) {
         const act = btn.dataset.act;
         if (act === "smaller" || act === "bigger") {
             const curr = selectedMedia.offsetWidth || 200;
-            const next = act === "bigger" ? curr * 1.2 : curr * 0.8;
-            // Min 80px, max = body content width.
-            const maxW = body.clientWidth - 28;
-            const newW = Math.max(80, Math.min(maxW, next));
+            // 10% step instead of 20% — smoother / less jumpy.
+            const next = act === "bigger" ? curr * 1.1 : curr * 0.9;
+            // Min 120px so the embed doesn't collapse to nothing, max =
+            // body's content width (clientWidth minus left+right padding).
+            const maxW = Math.max(160, body.clientWidth - 28);
+            const newW = Math.max(120, Math.min(maxW, next));
             selectedMedia.style.width = newW + "px";
-            // Lock the height too. For images we just let the natural
-            // aspect ratio decide via `height: auto`; for video embeds
-            // we set an explicit 16:9 height so the box doesn't rely
-            // on CSS aspect-ratio support (was a known Chrome quirk
-            // when children are all position:absolute) and there's
-            // no chance of an empty gap below the iframe.
+            // Images: let height follow naturally.
+            // Embeds: the CSS rule `aspect-ratio: 16/9` already locks
+            // the height to a 16:9 of whatever width we set — DON'T set
+            // inline style.height here. Forcing both width AND height
+            // inline made the height drift independently of the width
+            // on subsequent clicks (the inline height stayed from a
+            // previous round of rounding).
             if (selectedMedia.tagName === "IMG") {
                 selectedMedia.style.height = "auto";
             } else if (selectedMedia.classList.contains("floyo-embed")) {
-                selectedMedia.style.height = Math.round(newW * 9 / 16) + "px";
+                selectedMedia.style.removeProperty("height");
             }
             requestAnimationFrame(() => positionMediaTools(selectedMedia));
         } else if (act === "delete") {
