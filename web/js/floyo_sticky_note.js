@@ -94,10 +94,63 @@ const DEFAULT_THEME = "purple";
 const FONT_OPTIONS = ["Default", "Arcade", "Janeiro", "Roboto"];
 const DEFAULT_TITLE = "Floyo Sticky Note";
 // NOTE: the title lives in the LiteGraph title bar, not in the body —
-// so we don't duplicate it as an <h1> here.
-const DEFAULT_CONTENT = `<p>Use this sticky note to document and annotate your workflow on the canvas.</p>
-<p><b>Double-click</b> anywhere in this body to enter the editor and start writing.</p>
-<p>Double-click the <b>title bar</b> above to rename this note.</p>`;
+// so we don't duplicate it as an <h1> here. The default content below
+// doubles as a quick demo of every formatting feature: H1 / H2 / H3
+// headings, bold, italic, underline, strikethrough, inline code, code
+// blocks, and bullet + numbered lists.
+const DEFAULT_CONTENT = `<h1>📝 Floyo Sticky Note</h1>
+<p>This is a <b>canvas-only documentation node</b> built for the <i>Floyo workflow library</i> on top of ComfyUI. Use it to <u>annotate</u> and <b>describe parts of your workflow</b> right next to the nodes they explain — no need to leave the canvas.</p>
+
+<h2>✨ What you can do here</h2>
+<p>Every common rich-text feature you'd expect from a real editor — all wired up to <code>document.execCommand</code> for that battle-tested browser support:</p>
+<ul>
+<li><b>Bold</b>, <i>italic</i>, <u>underline</u>, and <s>strikethrough</s> for emphasis.</li>
+<li><b>Three heading levels</b> — H₁ for titles, H₂ for sections, H₃ for sub-sections.</li>
+<li>Inline <code>code</code> spans and full code blocks (try the <b>&lt;/&gt;</b> button).</li>
+<li>Both <b>bullet</b> and <b>numbered</b> lists, with proper nesting.</li>
+<li>Drop in <b>images</b> and <b>YouTube</b> / <b>Vimeo</b> videos via URL — they render as clickable preview cards.</li>
+</ul>
+
+<h2>🎨 Theming</h2>
+<p>Pick from three Floyo-branded themes via the footer swatches:</p>
+<ol>
+<li><b>Purple</b> — the default, calm and neutral.</li>
+<li><b>Blue</b> — perfect for "info" or "reference" notes.</li>
+<li><b>Green</b> — pair with completed sections or "best practice" callouts.</li>
+</ol>
+<p>The theme swap is <u>instant</u> and the colour syncs across the title bar, body, accent text, code blocks, and the directional notch.</p>
+
+<h3>About the font</h3>
+<p>The title bar uses the <b>ArcadePixelNeue</b> font for a bit of Floyo brand character. The body uses your system stack by default but you can pick <b>Roboto</b>, <b>Arcade</b>, or <b>Janeiro</b> from the footer dropdown.</p>
+
+<h2>🧭 Pointing at things</h2>
+<p>The 4-arrow compass in the footer projects a <b>matching-colour notch</b> out of any edge of the node — so when a sticky is sitting between a bunch of other nodes, a reader can tell exactly <i>which</i> node it's annotating. Click an arrow once to add the notch, click it again to clear.</p>
+
+<h3>Pro tips</h3>
+<ul>
+<li><b>Double-click</b> the body to enter editor mode. Double-click again outside, or click the green ✓, to save and exit.</li>
+<li><b>Double-click the title bar</b> to rename the note.</li>
+<li>Inside a code block, <b>press Enter on an empty line</b> (or hit Arrow-Down at the bottom) to escape back to a paragraph — same UX as Slack and Notion.</li>
+<li>To delete a video or image, <b>hover over it</b> and a small floating toolbar appears with <b>−</b> / <b>+</b> / <b>× Remove</b> controls.</li>
+</ul>
+
+<h2>⚙️ Under the hood</h2>
+<p>The node is a custom ComfyUI extension that lives in <code>web/js/floyo_sticky_note.js</code>. It registers as a LiteGraph node with <s>no inputs</s> and <s>no outputs</s> — so it's <u>skipped by the prompt queue at run time</u> and exists purely as a documentation artifact on the canvas.</p>
+
+<pre><code>// The Python side is just registration boilerplate
+class FloyoStickyNote:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {}}
+    RETURN_TYPES = ()
+    FUNCTION = "noop"
+    CATEGORY = "Floyo/Notes"
+    def noop(self):
+        return ()</code></pre>
+
+<h2>📌 Final note</h2>
+<p>This sticky note is built for the <b>top 50 Floyo workflows</b> conversion project — every shipped workflow should have a couple of these placed next to its key nodes to walk the user through what's happening.</p>
+<p>Happy documenting! ✍️</p>`;
 
 /* ─── Inject styles + Google Fonts (once) ─────────────────────────────── */
 
@@ -1306,7 +1359,7 @@ function setupStickyNote(node) {
         return changed;
     }
     if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
-        node.setSize([420, 240]);
+        node.setSize([480, 480]);
     } else {
         clampSize();
     }
