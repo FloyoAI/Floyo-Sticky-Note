@@ -802,17 +802,15 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Report widget = (current node height) − title-bar height. This is
-    // STABLE (no feedback loop): LiteGraph computes total = title + body
-    // = title + (node.size[1] − title) = node.size[1]. Returning [0, 0]
-    // tempts ComfyUI to skip sizing the container which lets the wrapper
-    // overflow below the node bounds — that's the "footer outside the
-    // node" glitch.
-    widget.computeSize = function () {
-        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        const wanted = (node.size?.[1] ?? 360) - titleH;
-        return [node.size?.[0] ?? 480, Math.max(wanted, 120)];
-    };
+    // Return a CONSTANT minimum size — never echo node.size back to
+    // LiteGraph. Echoing it created a runaway feedback loop where
+    // LiteGraph's layout grew the node a little, computeSize echoed
+    // the new bigger size, LiteGraph grew it again, and so on — the
+    // user ended up with a node big enough to fill the whole canvas.
+    // ComfyUI's DOM widget container fills whatever vertical space the
+    // user has manually sized the node to, so a small constant here
+    // doesn't prevent the wrapper from filling a larger node.
+    widget.computeSize = function () { return [320, 200]; };
 
     // ── Mode helpers ──
     function enterEditor() {
