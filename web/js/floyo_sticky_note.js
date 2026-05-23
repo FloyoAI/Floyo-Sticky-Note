@@ -1075,36 +1075,42 @@ function setupStickyNote(node) {
         // ── 2. Direction notch (Matt's feedback) ──
         // Speech-bubble-style triangle attached to the selected edge so
         // the reader can tell what the floating note is pointing at.
+        // Bigger + base extends slightly INTO the chrome so the notch
+        // visually merges with the title bar / body — no visible seam.
         const dir = node.properties.pointerDir;
         if (!dir) return;
-        const base = 22;   // width of the notch base
-        const reach = 14;  // how far it protrudes
+        const base  = 38;   // wider base = beefier notch
+        const reach = 22;   // taller protrusion
+        const overlap = 2;  // px the base sinks INTO the chrome
         ctx.save();
+        // Use the header colour for BOTH fill and stroke — the notch
+        // blends with the title bar with no separating outline.
         ctx.fillStyle   = t.header;
-        ctx.strokeStyle = t.border;
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = t.header;
+        ctx.lineWidth = 1;
+        ctx.lineJoin = "round";
         ctx.beginPath();
         if (dir === "up") {
             const cx = w / 2;
-            ctx.moveTo(cx - base / 2, -titleH);
-            ctx.lineTo(cx + base / 2, -titleH);
+            ctx.moveTo(cx - base / 2, -titleH + overlap);
+            ctx.lineTo(cx + base / 2, -titleH + overlap);
             ctx.lineTo(cx,            -titleH - reach);
         } else if (dir === "down") {
             const cx = w / 2;
-            ctx.moveTo(cx - base / 2, h);
-            ctx.lineTo(cx + base / 2, h);
+            ctx.moveTo(cx - base / 2, h - overlap);
+            ctx.lineTo(cx + base / 2, h - overlap);
             ctx.lineTo(cx,            h + reach);
         } else if (dir === "left") {
             // Vertical center includes the title-bar zone visually.
             const cy = (h - titleH) / 2;
-            ctx.moveTo(0,      cy - base / 2);
-            ctx.lineTo(0,      cy + base / 2);
-            ctx.lineTo(-reach, cy);
+            ctx.moveTo(overlap,  cy - base / 2);
+            ctx.lineTo(overlap,  cy + base / 2);
+            ctx.lineTo(-reach,   cy);
         } else { // right
             const cy = (h - titleH) / 2;
-            ctx.moveTo(w,         cy - base / 2);
-            ctx.lineTo(w,         cy + base / 2);
-            ctx.lineTo(w + reach, cy);
+            ctx.moveTo(w - overlap, cy - base / 2);
+            ctx.lineTo(w - overlap, cy + base / 2);
+            ctx.lineTo(w + reach,   cy);
         }
         ctx.closePath();
         ctx.fill();
