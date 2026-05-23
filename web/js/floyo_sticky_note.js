@@ -351,10 +351,11 @@ const STYLES = `
     width: 100%;
     max-width: 100%;
     /* Default 16:9 via aspect-ratio when no inline height is set.
-       The resize handler in JS ALSO sets `style.height` explicitly
-       (width * 9/16) when the user clicks [−]/[+] so we never depend
-       solely on aspect-ratio — that property has bug history when all
-       children are position:absolute. Both belt + suspenders. */
+       The resize handler in JS ALSO sets style.height explicitly
+       (width * 9/16) when the user clicks the resize buttons, so we
+       never depend solely on aspect-ratio (that property has bug
+       history when all children are position:absolute). Belt +
+       suspenders. */
     aspect-ratio: 16 / 9;
     height: auto;
     margin: 8px 0;
