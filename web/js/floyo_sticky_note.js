@@ -808,16 +808,14 @@ function setupStickyNote(node) {
     // loop between widget size and node size.
     widget.computeSize = function () { return [0, -4]; };
 
-    // The node's OWN computeSize is what LiteGraph uses for auto-resize
-    // decisions when widgets are added/removed or content overflows.
-    // We pin it to the current node.size — so LiteGraph can never
-    // "grow" the node beyond whatever the user has set via the drag
-    // handle. The user drag handle directly mutates node.size, which
-    // is honoured. Anything else (content overflow, widget add, etc.)
-    // is ignored.
-    node.computeSize = function () {
-        return node.size ? [node.size[0], node.size[1]] : [420, 240];
-    };
+    // The node's OWN computeSize is what LiteGraph uses to determine
+    // its MINIMUM size during resize. We return a small floor (240×80)
+    // so the user can drag the handle all the way down — but no
+    // smaller. Returning node.size would have made the current size
+    // the minimum, blocking shrink entirely. Returning a tiny floor
+    // here, combined with widget.computeSize=[0,-4], gives LiteGraph
+    // no reason to grow the node beyond what the user drags to.
+    node.computeSize = function () { return [240, 80]; };
 
     // Force the wrapper to fill the node body exactly. Since the widget
     // claims [0, -4], the DOM container ComfyUI creates is essentially
