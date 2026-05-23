@@ -802,15 +802,18 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
-    // Return a CONSTANT minimum size — never echo node.size back to
-    // LiteGraph. Echoing it created a runaway feedback loop where
-    // LiteGraph's layout grew the node a little, computeSize echoed
-    // the new bigger size, LiteGraph grew it again, and so on — the
-    // user ended up with a node big enough to fill the whole canvas.
-    // ComfyUI's DOM widget container fills whatever vertical space the
-    // user has manually sized the node to, so a small constant here
-    // doesn't prevent the wrapper from filling a larger node.
-    widget.computeSize = function () { return [320, 200]; };
+    // Widget claims node.size[1] − title bar — fills the whole body so
+    // the in-DOM footer hugs the actual node bottom instead of floating
+    // in the middle with empty purple below it.
+    // (Stable: total = title + (size[1] − title) = size[1]. Previous
+    //  "explosion" turned out to be the inline width+height drift on
+    //  embed resizes, not computeSize itself.)
+    widget.computeSize = function () {
+        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+        const w = (node.size && node.size[0]) || 460;
+        const h = Math.max(160, ((node.size && node.size[1]) || 340) - titleH);
+        return [w, h];
+    };
 
     // ── Mode helpers ──
     function enterEditor() {
