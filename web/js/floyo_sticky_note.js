@@ -1084,28 +1084,11 @@ function setupStickyNote(node) {
     //  widget — this catches those.)
     const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
 
-    // ── Title-bar chevron toggle (collapse / expand) ──
-    // Single click on the chevron icon (right side of title bar) flips
-    // node.flags.collapsed — same flag LiteGraph uses for its native
-    // minimise behaviour. LiteGraph then auto-hides our DOM widget when
-    // collapsed and restores it when expanded — no extra work needed.
-    const _origMouseDown = node.onMouseDown;
-    node.onMouseDown = function (e, pos /*, graphCanvas */) {
-        if (pos && node.size) {
-            const chevX = node.size[0] - 30;
-            const chevY = -titleH / 2;
-            const dx = pos[0] - chevX;
-            const dy = pos[1] - chevY;
-            // 14-px radius hit zone — comfy click target.
-            if (dx * dx + dy * dy <= 14 * 14) {
-                node.flags = node.flags || {};
-                node.flags.collapsed = !node.flags.collapsed;
-                node.setDirtyCanvas(true, true);
-                return true; // consume — don't let LiteGraph treat this as drag start
-            }
-        }
-        return _origMouseDown?.apply(this, arguments);
-    };
+    // Collapse / expand is handled by LiteGraph's NATIVE handle (the
+    // small chevron LiteGraph draws on the left of the title bar — it
+    // already toggles node.flags.collapsed when clicked). We don't
+    // draw our own button anymore; the Figma reference shows a single
+    // simple chevron in that exact spot, so the native one matches.
 
     node.onDblClick = function (e, pos /*, graphCanvas */) {
         // Title-bar zone — open rename prompt.
@@ -1141,50 +1124,25 @@ function setupStickyNote(node) {
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
 
         // ── 1. Custom title text in Arcade font ──
+        // Plain weight + 18 px — matches the Figma 945:5091 title-bar
+        // text size and rhythm. Bold made the pixel font look heavier
+        // than the reference; the typeface itself is already a pixel
+        // hand so it doesn't need a bold modifier.
         if (node.properties.title) {
             ctx.save();
-            ctx.font = `bold 16px "ArcadePixelNeue", "Courier New", monospace`;
+            ctx.font = `18px "ArcadePixelNeue", "Courier New", monospace`;
             ctx.fillStyle = "#FFFFFF";
             ctx.textBaseline = "middle";
             ctx.textAlign = "left";
-            // Leave room for LiteGraph's collapse dot (~22px from the left).
-            ctx.fillText(node.properties.title, 26, -titleH / 2 + 1);
+            // Leave room for LiteGraph's native collapse chevron (~22 px
+            // from the left edge of the title bar).
+            ctx.fillText(node.properties.title, 28, -titleH / 2 + 1);
             ctx.restore();
         }
 
-        // ── 1b. Collapse / expand chevron on the right of the title bar
-        const collapsed = !!node.flags?.collapsed;
-        ctx.save();
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
-        ctx.fillStyle   = "rgba(255, 255, 255, 0.18)";
-        ctx.lineWidth   = 2;
-        ctx.lineCap     = "round";
-        ctx.lineJoin    = "round";
-        // 22px-wide round rect background so the click target is clear.
-        const chevX = w - 30;
-        const chevY = -titleH / 2;
-        ctx.beginPath();
-        ctx.arc(chevX, chevY, 11, 0, Math.PI * 2);
-        ctx.fill();
-        // Arrow inside: ▼ when expanded, ▶ when collapsed.
-        ctx.beginPath();
-        if (collapsed) {
-            // Right-pointing chevron
-            ctx.moveTo(chevX - 3, chevY - 5);
-            ctx.lineTo(chevX + 4, chevY);
-            ctx.lineTo(chevX - 3, chevY + 5);
-        } else {
-            // Down-pointing chevron
-            ctx.moveTo(chevX - 5, chevY - 3);
-            ctx.lineTo(chevX,     chevY + 4);
-            ctx.lineTo(chevX + 5, chevY - 3);
-        }
-        ctx.stroke();
-        ctx.restore();
-
         // Skip drawing the notch while collapsed — the node has no body
         // to attach it to, and a notch floating around nothing looks weird.
-        if (collapsed) return;
+        if (node.flags?.collapsed) return;
 
         // ── 2. Direction notch (Matt's feedback) ──
         // Speech-bubble-style triangle attached to the selected edge so
