@@ -15,6 +15,13 @@
 
 import { app } from "../../../scripts/app.js";
 
+// Build marker so we can confirm in DevTools whether the latest JS is
+// actually being served (vs. a cached older copy). Look for this exact
+// string in the browser console on page load — if you don't see it,
+// the browser is serving a stale JS file and the recent fixes are not
+// loaded.
+console.log("%c[Floyo Sticky Note] build 2026-05-26 v4 (uncollapse + explicit chevron click)", "color:#A78BFA;font-weight:700");
+
 /* ─── Asset URLs (resolved relative to this JS file) ──────────────────── */
 //
 // ComfyUI serves the package's `web/` folder at /extensions/<pkg>/. By
@@ -814,6 +821,14 @@ app.registerExtension({
             const r = onNodeCreated?.apply(this, arguments);
             try {
                 setupStickyNote(this);
+                // Diagnostic: log final state so we can confirm in DevTools
+                // that the node has reasonable size + isn't collapsed.
+                console.log(
+                    "%c[Floyo Sticky Note]",
+                    "color:#A78BFA;font-weight:700",
+                    "ready — size:", this.size,
+                    "collapsed:", !!this.flags?.collapsed,
+                );
             } catch (err) {
                 console.error("[Floyo Sticky Note] setup failed:", err);
                 // Surface the error visibly inside the node so the user
