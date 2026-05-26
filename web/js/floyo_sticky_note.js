@@ -287,6 +287,53 @@ const STYLES = `
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-editor  { display: block; }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-display { display: none; }
 
+/* ── Display-mode affordances ──────────────────────────────────────── */
+/* In display mode (read-only) we surface two small controls in the
+   wrapper's bottom row — an Edit pencil on the left to enter editor
+   mode, and a "grip" indicator on the right hinting at the LiteGraph
+   resize handle. Both hide when the user enters editor mode (the full
+   footer takes their place). Lives as a flex sibling of body so it
+   stays pinned at the bottom even as body content scrolls. */
+.floyo-display-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px 8px;
+}
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
+
+.floyo-display-edit {
+    width: 28px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: all;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.floyo-display-edit:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.32);
+    transform: scale(1.05);
+}
+.floyo-display-edit:active { transform: scale(0.96); }
+
+.floyo-display-grip {
+    color: rgba(255, 255, 255, 0.35);
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
 /* Rich-text styles inside body */
 .floyo-sticky-body h1 {
     font-size: 22px; font-weight: 700; margin: 4px 0 8px;
@@ -855,12 +902,36 @@ function setupStickyNote(node) {
         </button>
     `;
 
+    // Display-mode helpers: an "Edit" pencil button in the bottom-left
+    // of the body and a visual resize affordance in the bottom-right.
+    // Both are hidden once the user enters editor mode.
+    const displayActions = document.createElement("div");
+    displayActions.className = "floyo-display-actions";
+    displayActions.innerHTML = `
+        <button type="button" class="floyo-display-edit" title="Edit">
+            <svg viewBox="0 0 18 18" width="14" height="14" fill="none"
+                 stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 14 L2 16 L4 16 L13 7 L11 5 Z"/>
+                <path d="M11 5 L13 3 L15 5 L13 7"/>
+            </svg>
+        </button>
+        <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
+            <svg viewBox="0 0 18 18" width="12" height="12" fill="currentColor" aria-hidden="true">
+                <circle cx="14" cy="14" r="1"/><circle cx="14" cy="10" r="1"/><circle cx="10" cy="14" r="1"/>
+            </svg>
+        </div>
+    `;
+
     body.append(display, editor, imgTools);
 
     // Footer (visible only in editor mode)
     const footer = createFooter();
 
-    wrapper.append(toolbar, body, footer);
+    // displayActions sits between body and footer so it always pins to
+    // the bottom of the visible note (instead of scrolling with body
+    // content) and is hidden when the footer takes over in editor mode.
+    wrapper.append(toolbar, body, displayActions, footer);
 
     // ── Attach as a DOM widget that fills the entire node ──
     const widget = node.addDOMWidget("floyo_sticky", "div", wrapper, {
@@ -922,6 +993,14 @@ function setupStickyNote(node) {
         e.stopPropagation();
         enterEditor();
     });
+
+    // Edit pencil button (display-mode only) — single click enters editor.
+    displayActions.querySelector(".floyo-display-edit")
+        .addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            enterEditor();
+        });
 
     // ── Image + video selection / resize / delete ──
     // Click an <img> or .floyo-embed (video card) inside the editor →
