@@ -267,9 +267,15 @@ const STYLES = `
 }
 
 /* ── Body (display + editor share this slot) ── */
+/* `min-height: 0` is critical — without it `flex: 1 1 auto` would
+   resolve the body's flex-basis to its content height and the
+   `overflow: auto` would never kick in. With min-height: 0 the flex
+   layout shrinks the body to fit the wrapper, then content beyond
+   that scrolls inside this element instead of pushing the wrapper. */
 .floyo-sticky-body {
-    flex: 1 1 auto;
-    overflow: auto;
+    flex: 1 1 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px 14px;
     min-height: 0;
     position: relative;
@@ -937,17 +943,30 @@ function setupStickyNote(node) {
     const widget = node.addDOMWidget("floyo_sticky", "div", wrapper, {
         serialize: false,
         hideOnZoom: false,
+        // Some ComfyUI builds honour these. Both clamp the widget's
+        // height to the body slice of node.size, so the long-content
+        // ResizeObserver inside the frontend can never push the node
+        // taller than the user actually sized it.
+        getMinHeight: () => {
+            const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+            return node.size ? Math.max(30, node.size[1] - titleH) : 200;
+        },
+        getMaxHeight: () => {
+            const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+            return node.size ? Math.max(30, node.size[1] - titleH) : 200;
+        },
     });
     // Widget claims (node body width × body height) so ComfyUI sizes
-    // its DOM container correctly and the wrapper inside it just fills
-    // 100%. Stable because changing node.size only changes the next
-    // widget.computeSize return by the same delta — no feedback loop.
+    // its DOM container to exactly what we want. Caps at MAX_H so the
+    // ResizeObserver inside the ComfyUI frontend can never auto-grow
+    // the node past 800 px — content beyond that scrolls inside body.
     widget.computeSize = function () {
         if (!node.size) return [420, 200];
         const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        // Body floor matches MIN_H − titleH so shrinking the node
-        // doesn't get stuck on a too-tall widget body.
-        return [node.size[0], Math.max(30, node.size[1] - titleH)];
+        // Hard cap at 770 (= 800 MAX_H − titleH).  This guarantees the
+        // widget can never claim more height than fits the cap.
+        const h = Math.max(30, Math.min(770, node.size[1] - titleH));
+        return [node.size[0], h];
     };
 
     // The node's OWN computeSize is what LiteGraph uses to determine
@@ -971,6 +990,7 @@ function setupStickyNote(node) {
         const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
         const bodyH  = Math.max(30, node.size[1] - titleH);
         const px     = bodyH + "px";
+        const w      = node.size[0] + "px";
         // Only touch the DOM when the value actually changes — avoids
         // forcing layout on every frame.
         if (wrapper.style.height !== px) {
@@ -978,13 +998,41 @@ function setupStickyNote(node) {
             wrapper.style.maxHeight = px;
             wrapper.style.minHeight = px;
         }
-        const w = node.size[0] + "px";
         if (wrapper.style.width !== w) {
             wrapper.style.width    = w;
             wrapper.style.maxWidth = w;
         }
+        // Also pin ComfyUI's outer DOM-widget container — it's the one
+        // the frontend's ResizeObserver actually watches. Without this
+        // the parent grows to fit content, then triggers a node.size
+        // update that resists our clamp. We override its inline styles
+        // with the same body slice so the ResizeObserver sees a stable
+        // size and never pushes node.size past MAX_H.
+        const parent = wrapper.parentElement;
+        if (parent) {
+            if (parent.style.height !== px) {
+                parent.style.height    = px;
+                parent.style.maxHeight = px;
+                parent.style.minHeight = px;
+            }
+            if (parent.style.overflow !== "hidden") {
+                parent.style.overflow = "hidden";
+            }
+        }
     }
     syncWrapperSize();
+
+    // Aggressive failsafe — re-pin every 100 ms even if the canvas
+    // isn't redrawing. ComfyUI's ResizeObserver can fire asynchronously
+    // outside the paint cycle; if it grows the wrapper between two of
+    // our paints, the user briefly sees a balloon node. 100 ms snaps it
+    // back fast enough to be invisible.
+    const sizePinMon = setInterval(syncWrapperSize, 100);
+    const _origRemovedPin = node.onRemoved;
+    node.onRemoved = function () {
+        clearInterval(sizePinMon);
+        return _origRemovedPin?.apply(this, arguments);
+    };
 
     // ── Mode helpers ──
     function enterEditor() {
