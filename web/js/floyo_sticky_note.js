@@ -1413,7 +1413,18 @@ function setupStickyNote(node) {
             node.properties.pointerDir =
                 node.properties.pointerDir === dir ? null : dir;
             applyPointerActive();
+            // Trigger a redraw via every available path — some ComfyUI
+            // versions debounce `node.setDirtyCanvas` differently and
+            // the notch then waits a full second before appearing. Hit
+            // node, graph, AND canvas so SOMETHING refreshes immediately.
             node.setDirtyCanvas(true, true);
+            try { app?.graph?.setDirtyCanvas?.(true, true); } catch (_) {}
+            try { app?.canvas?.draw?.(true, true); } catch (_) {}
+            console.log(
+                "[Floyo Sticky Note] pointerDir =",
+                node.properties.pointerDir,
+                "  node.size =", node.size && [...node.size]
+            );
         },
     });
     applyPointerActive();
