@@ -1252,22 +1252,28 @@ function setupStickyNote(node) {
         // ── 3. Direction notch (Matt's feedback) ──
         // Speech-bubble-style triangle attached to the selected edge so
         // the reader can tell what the floating note is pointing at.
-        // Bigger + base extends slightly INTO the chrome so the notch
+        // The base extends slightly INTO the chrome so the notch
         // visually merges with the title bar / body — no visible seam.
+        //
+        // Size scales with the smaller of the node's two dimensions —
+        // tiny notes get a smaller notch, big notes get a bigger one.
+        // Clamped so the notch always stays in a reasonable range.
         const dir = node.properties.pointerDir;
         if (!dir) return;
-        const base  = 56;   // beefier notch — another +50% per Ritik
-        const reach = 32;   // taller protrusion
+        const ref   = Math.min(w, h);
+        const base  = Math.max(28, Math.min(120, ref * 0.18));  // wider of the triangle
+        const reach = Math.max(18, Math.min(70,  ref * 0.10));  // how far the tip protrudes
         const overlap = 2;  // px the base sinks INTO the chrome
         ctx.save();
-        // Use the header colour for BOTH fill and stroke — the notch
-        // blends with the title bar with no separating outline.
-        // Use the body's bg colour so the notch reads as part of the
-        // node's main mass (Ritik: "node ka jo bhi colour hoga, wo arrow
-        // ka colour"). Header purple was too light vs. the dark body.
+        // Fill with the body bg colour so the notch reads as part of
+        // the node's main mass (Ritik: "node ka jo bhi colour hoga, wo
+        // arrow ka colour"). A thin white-with-low-alpha stroke makes
+        // the silhouette legible even when the canvas behind is also
+        // dark — without it the notch can blend into a dark workspace
+        // and look invisible.
         ctx.fillStyle   = t.bg;
-        ctx.strokeStyle = t.bg;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+        ctx.lineWidth = 1.5;
         ctx.lineJoin = "round";
         ctx.beginPath();
         if (dir === "up") {
