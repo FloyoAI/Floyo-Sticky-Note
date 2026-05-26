@@ -957,11 +957,34 @@ function setupStickyNote(node) {
     // make the current size the minimum and block shrinking entirely.
     node.computeSize = function () { return [180, 60]; };
 
-    // No syncWrapperSize override — the wrapper's CSS `height: 100%`
-    // resolves to the DOM container's height, which ComfyUI now sizes
-    // correctly from widget.computeSize. Manual sizing was making the
-    // wrapper a couple of px wider than the chrome's visible body,
-    // which is what was overflowing on the right.
+    // ── Force the wrapper to honour node.size, NOT content ──
+    // ComfyUI's DOM-widget layout, in some versions, sizes its container
+    // from the element's intrinsic content height — which makes the node
+    // balloon out to fit a long sticky note instead of clamping to the
+    // user-set node.size and letting the body scroll inside. We defend
+    // against this by setting an explicit pixel height on the wrapper
+    // every draw. With both wrapper.height AND wrapper.maxHeight pinned,
+    // the body's overflow:auto can finally take over and produce a
+    // scrollbar for over-long notes.
+    function syncWrapperSize() {
+        if (!node.size) return;
+        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
+        const bodyH  = Math.max(30, node.size[1] - titleH);
+        const px     = bodyH + "px";
+        // Only touch the DOM when the value actually changes — avoids
+        // forcing layout on every frame.
+        if (wrapper.style.height !== px) {
+            wrapper.style.height    = px;
+            wrapper.style.maxHeight = px;
+            wrapper.style.minHeight = px;
+        }
+        const w = node.size[0] + "px";
+        if (wrapper.style.width !== w) {
+            wrapper.style.width    = w;
+            wrapper.style.maxWidth = w;
+        }
+    }
+    syncWrapperSize();
 
     // ── Mode helpers ──
     function enterEditor() {
@@ -1444,9 +1467,12 @@ function setupStickyNote(node) {
     // Min: small enough that the user can drag the resize handle all
     // the way down to a slim title-only state. Earlier 240×80 floor
     // felt "stuck" — the node refused to shrink past comfortable size.
-    // Max: a generous sanity cap to catch true runaways.
+    // Max: tighter cap. Sticky notes longer than ~800 px should scroll
+    // *inside* the body, not stretch the node. Beyond 800 the node is
+    // taller than most laptop viewports — past that we force the body's
+    // overflow:auto scrollbar to take over.
     const MIN_W = 180, MIN_H = 60;
-    const MAX_W = 1600, MAX_H = 1200;
+    const MAX_W = 1600, MAX_H = 800;
 
     // ── Debug: trace every node.size change so we can see WHO is
     // growing the node and from where. Poll every 200 ms; on every
@@ -1486,14 +1512,16 @@ function setupStickyNote(node) {
     } else {
         clampSize();
     }
-    // Continuous clamp — runs on every canvas redraw (cheap; just an
-    // array comparison). Catches direct mutations of node.size[] that
-    // ComfyUI's auto-resize might do behind setSize's back. No need to
-    // setDirtyCanvas — we're already inside a draw pass, and the next
-    // frame naturally picks up the new size.
+    // Continuous clamp + wrapper-size sync — runs on every canvas redraw
+    // (cheap; just array compares + at most a couple of style writes when
+    // node.size has actually changed). Catches direct mutations of
+    // node.size[] that ComfyUI's auto-resize might do behind setSize's
+    // back, and re-pins the wrapper height/width so the DOM widget never
+    // grows beyond the user-controlled node size.
     const onDrawForegroundClamp = node.onDrawForeground;
     node.onDrawForeground = function () {
         clampSize();
+        syncWrapperSize();
         return onDrawForegroundClamp?.apply(this, arguments);
     };
 
