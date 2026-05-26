@@ -1781,7 +1781,33 @@ function createFooter() {
 }
 
 function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave, onPointerDir }) {
-    // Pointer-direction arrows (4-way compass in the footer)
+    // Pointer-direction arrows (4-way compass in the footer).
+    // Listen on the OUTER `.floyo-footer-pointer` container with event
+    // delegation — clicks anywhere inside (SVG, path, padding) bubble up
+    // and `closest('.floyo-pointer-arrow')` finds which arrow was hit.
+    // This is more robust than wiring each `<path>` individually, because
+    // some browsers/versions don't reliably fire `click` on SVG `<path>`
+    // children inside a Shadow-DOM-style nested structure.
+    const compass = footer.querySelector(".floyo-footer-pointer");
+    if (compass) {
+        compass.addEventListener("mousedown", (e) => {
+            // Block LiteGraph from also handling this click — keep focus.
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        compass.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const arrow = e.target.closest(".floyo-pointer-arrow");
+            if (!arrow) return;
+            const dir = arrow.dataset.dir;
+            if (!dir) return;
+            console.log("[Floyo Sticky Note] pointer click:", dir);
+            onPointerDir?.(dir);
+        });
+    }
+    // Keep the original per-path listeners as a belt-and-braces backup
+    // for any browser where the delegated handler somehow misses.
     footer.querySelectorAll(".floyo-pointer-arrow").forEach((arrow) => {
         arrow.addEventListener("mousedown", (e) => e.preventDefault());
         arrow.addEventListener("click", (e) => {
