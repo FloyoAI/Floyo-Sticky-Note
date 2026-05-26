@@ -945,15 +945,17 @@ function setupStickyNote(node) {
     widget.computeSize = function () {
         if (!node.size) return [420, 200];
         const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        return [node.size[0], Math.max(60, node.size[1] - titleH)];
+        // Body floor matches MIN_H − titleH so shrinking the node
+        // doesn't get stuck on a too-tall widget body.
+        return [node.size[0], Math.max(30, node.size[1] - titleH)];
     };
 
     // The node's OWN computeSize is what LiteGraph uses to determine
-    // its MINIMUM size during resize. Returning a small floor (240×80)
-    // lets the user drag the handle all the way down. Returning
-    // node.size would make the current size the minimum and block
-    // shrinking entirely.
-    node.computeSize = function () { return [240, 80]; };
+    // its MINIMUM size during resize. Returning a small floor (180×60)
+    // lets the user drag the handle all the way down to a slim
+    // title-bar-only-with-sliver state. Returning node.size would
+    // make the current size the minimum and block shrinking entirely.
+    node.computeSize = function () { return [180, 60]; };
 
     // No syncWrapperSize override — the wrapper's CSS `height: 100%`
     // resolves to the DOM container's height, which ComfyUI now sizes
@@ -1163,11 +1165,13 @@ function setupStickyNote(node) {
     //  widget — this catches those.)
     const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
 
-    // Collapse / expand is handled by LiteGraph's NATIVE handle (the
-    // small chevron LiteGraph draws on the left of the title bar — it
-    // already toggles node.flags.collapsed when clicked). We don't
-    // draw our own button anymore; the Figma reference shows a single
-    // simple chevron in that exact spot, so the native one matches.
+    // Collapse / expand click handling is provided by LiteGraph's
+    // NATIVE chevron region (the small clickable spot LiteGraph draws
+    // at the left of the title bar — clicking it toggles
+    // node.flags.collapsed). We paint our own larger, pixel-art-style
+    // chevron over the top in onDrawForeground so the icon visually
+    // matches the ArcadePixelNeue title; the click region underneath
+    // is still LiteGraph's, so no extra mouse plumbing is needed.
 
     node.onDblClick = function (e, pos /*, graphCanvas */) {
         // Title-bar zone — open rename prompt.
@@ -1189,9 +1193,10 @@ function setupStickyNote(node) {
         return false;
     };
 
-    // ── Pointer-arrow rendering on the LiteGraph canvas ──
-    // Draws (a) the title text in the Arcade font in the title-bar zone,
-    // (b) a triangular speech-bubble notch protruding from the selected
+    // ── Title-bar + canvas overlay rendering ──
+    // Draws (a) a custom Figma-style chevron over LiteGraph's native one,
+    // (b) the title text in the Arcade font in the title-bar zone,
+    // (c) a triangular speech-bubble notch protruding from the selected
     // side of the node when a pointer direction is set. The ctx LiteGraph
     // passes is translated so (0,0) is the top-left of the body — the
     // title bar lives at y ∈ [-titleH, 0].
@@ -1202,7 +1207,37 @@ function setupStickyNote(node) {
         const [w, h] = node.size;
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
 
-        // ── 1. Custom title text in Arcade font ──
+        // ── 1. Custom collapse/expand chevron in the title bar ──
+        // LiteGraph's native chevron is a thin 7-px circle/dot that
+        // visually doesn't belong with the pixel-art ArcadePixelNeue
+        // title text. We draw a solid triangle in white at the same
+        // location, sized to read at a glance:
+        //   ▶  when collapsed (chevron points to the hidden body)
+        //   ▼  when expanded  (chevron points down at the open body)
+        // The native click region underneath still handles the toggle
+        // — we just paint a better-looking icon on top.
+        const chevCx = 14;             // horizontal center of chevron
+        const chevCy = -titleH / 2;    // vertical center within title bar
+        const chevR  = 5;              // chevron half-size (so visual ≈ 10 px)
+        ctx.save();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath();
+        if (node.flags?.collapsed) {
+            // ▶ — pointing right
+            ctx.moveTo(chevCx - chevR + 1, chevCy - chevR);
+            ctx.lineTo(chevCx - chevR + 1, chevCy + chevR);
+            ctx.lineTo(chevCx + chevR,     chevCy);
+        } else {
+            // ▼ — pointing down
+            ctx.moveTo(chevCx - chevR,     chevCy - chevR + 1);
+            ctx.lineTo(chevCx + chevR,     chevCy - chevR + 1);
+            ctx.lineTo(chevCx,             chevCy + chevR);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // ── 2. Custom title text in Arcade font ──
         // Plain weight + 18 px — matches the Figma 945:5091 title-bar
         // text size and rhythm. Bold made the pixel font look heavier
         // than the reference; the typeface itself is already a pixel
@@ -1213,8 +1248,9 @@ function setupStickyNote(node) {
             ctx.fillStyle = "#FFFFFF";
             ctx.textBaseline = "middle";
             ctx.textAlign = "left";
-            // Leave room for LiteGraph's native collapse chevron (~22 px
-            // from the left edge of the title bar).
+            // Leave room for our custom chevron (~28 px from the left
+            // edge of the title bar so it visually sits in the same
+            // slot as LiteGraph's native handle).
             ctx.fillText(node.properties.title, 28, -titleH / 2 + 1);
             ctx.restore();
         }
@@ -1223,7 +1259,7 @@ function setupStickyNote(node) {
         // to attach it to, and a notch floating around nothing looks weird.
         if (node.flags?.collapsed) return;
 
-        // ── 2. Direction notch (Matt's feedback) ──
+        // ── 3. Direction notch (Matt's feedback) ──
         // Speech-bubble-style triangle attached to the selected edge so
         // the reader can tell what the floating note is pointing at.
         // Bigger + base extends slightly INTO the chrome so the notch
@@ -1415,9 +1451,11 @@ function setupStickyNote(node) {
     //   1. set a sane default,
     //   2. intercept setSize() and clamp inside it,
     //   3. re-clamp every paint in onDrawForeground.
-    // Min: just enough that the title bar + a bit of body is visible.
+    // Min: small enough that the user can drag the resize handle all
+    // the way down to a slim title-only state. Earlier 240×80 floor
+    // felt "stuck" — the node refused to shrink past comfortable size.
     // Max: a generous sanity cap to catch true runaways.
-    const MIN_W = 240, MIN_H = 80;
+    const MIN_W = 180, MIN_H = 60;
     const MAX_W = 1600, MAX_H = 1200;
 
     // ── Debug: trace every node.size change so we can see WHO is
