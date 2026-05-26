@@ -15,12 +15,9 @@
 
 import { app } from "../../../scripts/app.js";
 
-// Build marker so we can confirm in DevTools whether the latest JS is
-// actually being served (vs. a cached older copy). Look for this exact
-// string in the browser console on page load — if you don't see it,
-// the browser is serving a stale JS file and the recent fixes are not
-// loaded.
-console.log("%c[Floyo Sticky Note] build 2026-05-26 v4 (uncollapse + explicit chevron click)", "color:#A78BFA;font-weight:700");
+// Top-level marker — if you don't see this in the browser console then the
+// JS file is not being loaded by ComfyUI at all.
+console.log("%c[Floyo Sticky Note] module loaded — build 2026-05-23-resize-debug", "color:#A78BFA;font-weight:700");
 
 /* ─── Asset URLs (resolved relative to this JS file) ──────────────────── */
 //
@@ -43,6 +40,7 @@ const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
         document.fonts.add(face);
         // Force any node currently on the canvas to repaint with the new font.
         app?.graph?.setDirtyCanvas?.(true, true);
+        console.log("[Floyo Sticky Note] Arcade font loaded");
     } catch (e) {
         console.warn("[Floyo Sticky Note] Arcade font load failed:", e);
     }
@@ -269,15 +267,9 @@ const STYLES = `
 }
 
 /* ── Body (display + editor share this slot) ── */
-/* `min-height: 0` is critical — without it `flex: 1 1 auto` would
-   resolve the body's flex-basis to its content height and the
-   `overflow: auto` would never kick in. With min-height: 0 the flex
-   layout shrinks the body to fit the wrapper, then content beyond
-   that scrolls inside this element instead of pushing the wrapper. */
 .floyo-sticky-body {
-    flex: 1 1 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex: 1 1 auto;
+    overflow: auto;
     padding: 12px 14px;
     min-height: 0;
     position: relative;
@@ -793,6 +785,7 @@ app.registerExtension({
     name: "Floyo.StickyNote",
     async beforeRegisterNodeDef(nodeType, nodeData /*, app */) {
         if (nodeData.name !== "FloyoStickyNote") return;
+        console.log("[Floyo Sticky Note] patching node class FloyoStickyNote");
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
@@ -808,27 +801,13 @@ app.registerExtension({
                 // in Arcade font inside onDrawForeground (set up later).
                 this.title = "";
                 this.getTitle = function () { return ""; };
-                // Always start UN-collapsed. Workflow JSON sometimes pins
-                // flags.collapsed=true on freshly-added nodes (or a stray
-                // click on the chevron during the same session collapses
-                // it), which makes the node look like a tiny title chip
-                // with no visible body. Force it open here so the user
-                // never sees a "broken-looking" sticky note on first add.
-                this.flags = this.flags || {};
-                this.flags.collapsed = false;
             } catch (e) { console.warn("[Floyo Sticky Note] early theme failed:", e); }
 
             const r = onNodeCreated?.apply(this, arguments);
             try {
+                console.log("[Floyo Sticky Note] onNodeCreated — setting up widget");
                 setupStickyNote(this);
-                // Diagnostic: log final state so we can confirm in DevTools
-                // that the node has reasonable size + isn't collapsed.
-                console.log(
-                    "%c[Floyo Sticky Note]",
-                    "color:#A78BFA;font-weight:700",
-                    "ready — size:", this.size,
-                    "collapsed:", !!this.flags?.collapsed,
-                );
+                console.log("[Floyo Sticky Note] setup complete");
             } catch (err) {
                 console.error("[Floyo Sticky Note] setup failed:", err);
                 // Surface the error visibly inside the node so the user
@@ -958,30 +937,17 @@ function setupStickyNote(node) {
     const widget = node.addDOMWidget("floyo_sticky", "div", wrapper, {
         serialize: false,
         hideOnZoom: false,
-        // Some ComfyUI builds honour these. Both clamp the widget's
-        // height to the body slice of node.size, so the long-content
-        // ResizeObserver inside the frontend can never push the node
-        // taller than the user actually sized it.
-        getMinHeight: () => {
-            const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-            return node.size ? Math.max(30, node.size[1] - titleH) : 200;
-        },
-        getMaxHeight: () => {
-            const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-            return node.size ? Math.max(30, node.size[1] - titleH) : 200;
-        },
     });
     // Widget claims (node body width × body height) so ComfyUI sizes
-    // its DOM container to exactly what we want. Caps at MAX_H so the
-    // ResizeObserver inside the ComfyUI frontend can never auto-grow
-    // the node past 800 px — content beyond that scrolls inside body.
+    // its DOM container correctly and the wrapper inside it just fills
+    // 100%. Stable because changing node.size only changes the next
+    // widget.computeSize return by the same delta — no feedback loop.
     widget.computeSize = function () {
         if (!node.size) return [420, 200];
         const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        // Hard cap at 770 (= 800 MAX_H − titleH).  This guarantees the
-        // widget can never claim more height than fits the cap.
-        const h = Math.max(30, Math.min(770, node.size[1] - titleH));
-        return [node.size[0], h];
+        // Body floor matches MIN_H − titleH so shrinking the node
+        // doesn't get stuck on a too-tall widget body.
+        return [node.size[0], Math.max(30, node.size[1] - titleH)];
     };
 
     // The node's OWN computeSize is what LiteGraph uses to determine
@@ -991,63 +957,11 @@ function setupStickyNote(node) {
     // make the current size the minimum and block shrinking entirely.
     node.computeSize = function () { return [180, 60]; };
 
-    // ── Force the wrapper to honour node.size, NOT content ──
-    // ComfyUI's DOM-widget layout, in some versions, sizes its container
-    // from the element's intrinsic content height — which makes the node
-    // balloon out to fit a long sticky note instead of clamping to the
-    // user-set node.size and letting the body scroll inside. We defend
-    // against this by setting an explicit pixel height on the wrapper
-    // every draw. With both wrapper.height AND wrapper.maxHeight pinned,
-    // the body's overflow:auto can finally take over and produce a
-    // scrollbar for over-long notes.
-    function syncWrapperSize() {
-        if (!node.size) return;
-        const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
-        const bodyH  = Math.max(30, node.size[1] - titleH);
-        const px     = bodyH + "px";
-        const w      = node.size[0] + "px";
-        // Only touch the DOM when the value actually changes — avoids
-        // forcing layout on every frame.
-        if (wrapper.style.height !== px) {
-            wrapper.style.height    = px;
-            wrapper.style.maxHeight = px;
-            wrapper.style.minHeight = px;
-        }
-        if (wrapper.style.width !== w) {
-            wrapper.style.width    = w;
-            wrapper.style.maxWidth = w;
-        }
-        // Also pin ComfyUI's outer DOM-widget container — it's the one
-        // the frontend's ResizeObserver actually watches. Without this
-        // the parent grows to fit content, then triggers a node.size
-        // update that resists our clamp. We override its inline styles
-        // with the same body slice so the ResizeObserver sees a stable
-        // size and never pushes node.size past MAX_H.
-        const parent = wrapper.parentElement;
-        if (parent) {
-            if (parent.style.height !== px) {
-                parent.style.height    = px;
-                parent.style.maxHeight = px;
-                parent.style.minHeight = px;
-            }
-            if (parent.style.overflow !== "hidden") {
-                parent.style.overflow = "hidden";
-            }
-        }
-    }
-    syncWrapperSize();
-
-    // Aggressive failsafe — re-pin every 100 ms even if the canvas
-    // isn't redrawing. ComfyUI's ResizeObserver can fire asynchronously
-    // outside the paint cycle; if it grows the wrapper between two of
-    // our paints, the user briefly sees a balloon node. 100 ms snaps it
-    // back fast enough to be invisible.
-    const sizePinMon = setInterval(syncWrapperSize, 100);
-    const _origRemovedPin = node.onRemoved;
-    node.onRemoved = function () {
-        clearInterval(sizePinMon);
-        return _origRemovedPin?.apply(this, arguments);
-    };
+    // No syncWrapperSize override — the wrapper's CSS `height: 100%`
+    // resolves to the DOM container's height, which ComfyUI now sizes
+    // correctly from widget.computeSize. Manual sizing was making the
+    // wrapper a couple of px wider than the chrome's visible body,
+    // which is what was overflowing on the right.
 
     // ── Mode helpers ──
     function enterEditor() {
@@ -1182,6 +1096,8 @@ function setupStickyNote(node) {
         e.stopPropagation();
         const act = btn.dataset.act;
         if (act === "smaller" || act === "bigger") {
+            const tag = selectedMedia.classList.contains("floyo-embed") ? "embed" : "img";
+            const beforeRect  = selectedMedia.getBoundingClientRect();
             // Snapshot the node size BEFORE the resize. If anything grows
             // the node as a side-effect, we'll snap it back.
             const lockedSize = node.size ? [...node.size] : null;
@@ -1207,6 +1123,16 @@ function setupStickyNote(node) {
             requestAnimationFrame(() => {
                 restoreNodeSize();
                 positionMediaTools(selectedMedia);
+                const afterRect = selectedMedia.getBoundingClientRect();
+                console.log("%c[Floyo resize]", "color:#FBBF24;font-weight:700", {
+                    tag, act,
+                    before:  { w: Math.round(beforeRect.width),  h: Math.round(beforeRect.height) },
+                    setWidth: newW,
+                    after:   { w: Math.round(afterRect.width),   h: Math.round(afterRect.height) },
+                    bodyClientW: body.clientWidth,
+                    nodeSizeLocked: lockedSize ? lockedSize[1] : null,
+                    nodeSizeAfter:  node.size ? node.size[1] : null,
+                });
             });
             // One more snap-back on the NEXT frame in case ComfyUI
             // re-runs its own layout after ours.
@@ -1239,24 +1165,13 @@ function setupStickyNote(node) {
     //  widget — this catches those.)
     const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
 
-    // Collapse / expand click handling — LiteGraph has a NATIVE
-    // chevron click region at the left of the title bar, but if its
-    // position doesn't line up exactly with where we paint our custom
-    // chevron the user's click can fall in a "dead zone" and nothing
-    // happens. We add our own explicit handler over the top 22 px of
-    // the left-title-bar so toggling collapse always works regardless
-    // of LiteGraph version.
-    const origOnMouseDown = node.onMouseDown;
-    node.onMouseDown = function (e, pos /*, graphCanvas */) {
-        if (pos && pos[0] >= 0 && pos[0] < 24 &&
-            pos[1] <= 0 && pos[1] >= -((window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30) - 4) {
-            node.flags = node.flags || {};
-            node.flags.collapsed = !node.flags.collapsed;
-            node.setDirtyCanvas(true, true);
-            return true; // consume — don't fall through to LiteGraph's own toggle
-        }
-        return origOnMouseDown?.apply(this, arguments);
-    };
+    // Collapse / expand click handling is provided by LiteGraph's
+    // NATIVE chevron region (the small clickable spot LiteGraph draws
+    // at the left of the title bar — clicking it toggles
+    // node.flags.collapsed). We paint our own larger, pixel-art-style
+    // chevron over the top in onDrawForeground so the icon visually
+    // matches the ArcadePixelNeue title; the click region underneath
+    // is still LiteGraph's, so no extra mouse plumbing is needed.
 
     node.onDblClick = function (e, pos /*, graphCanvas */) {
         // Title-bar zone — open rename prompt.
@@ -1529,13 +1444,34 @@ function setupStickyNote(node) {
     // Min: small enough that the user can drag the resize handle all
     // the way down to a slim title-only state. Earlier 240×80 floor
     // felt "stuck" — the node refused to shrink past comfortable size.
-    // Max: tighter cap. Sticky notes longer than ~800 px should scroll
-    // *inside* the body, not stretch the node. Beyond 800 the node is
-    // taller than most laptop viewports — past that we force the body's
-    // overflow:auto scrollbar to take over.
+    // Max: a generous sanity cap to catch true runaways.
     const MIN_W = 180, MIN_H = 60;
-    const MAX_W = 1600, MAX_H = 800;
+    const MAX_W = 1600, MAX_H = 1200;
 
+    // ── Debug: trace every node.size change so we can see WHO is
+    // growing the node and from where. Poll every 200 ms; on every
+    // change, dump the old/new values + a stack to identify the
+    // caller.
+    let lastSize = node.size ? [...node.size] : [0, 0];
+    const sizeMon = setInterval(() => {
+        if (!node.size) return;
+        if (node.size[0] !== lastSize[0] || node.size[1] !== lastSize[1]) {
+            console.log(
+                "%c[Floyo size]",
+                "color:#FBBF24;font-weight:700",
+                "was", [...lastSize],
+                "→ now", [...node.size],
+                "  (delta", [node.size[0] - lastSize[0], node.size[1] - lastSize[1]], ")"
+            );
+            lastSize = [...node.size];
+        }
+    }, 200);
+    // Clean up on removal so we don't leak.
+    const _origRemovedSize = node.onRemoved;
+    node.onRemoved = function () {
+        clearInterval(sizeMon);
+        return _origRemovedSize?.apply(this, arguments);
+    };
     function clampSize() {
         if (!node.size) return false;
         let changed = false;
@@ -1545,29 +1481,19 @@ function setupStickyNote(node) {
         if (node.size[1] < MIN_H) { node.size[1] = MIN_H; changed = true; }
         return changed;
     }
-    // Initial size: upgrade to a usable default the first time the node
-    // is created.  `node.computeSize()` returns [MIN_W, MIN_H] which
-    // LiteGraph uses as the default, so we can't compare with `< MIN`
-    // (the strict less-than would never trip and the node would stay
-    // pinned at the tiny chip size).  Compare with the default sentinel
-    // instead — anything around the minimum gets upgraded to 480×480.
-    const isFreshNode = !node.size ||
-        (node.size[0] <= MIN_W + 1 && node.size[1] <= MIN_H + 1);
-    if (isFreshNode) {
+    if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
         node.setSize([480, 480]);
     } else {
         clampSize();
     }
-    // Continuous clamp + wrapper-size sync — runs on every canvas redraw
-    // (cheap; just array compares + at most a couple of style writes when
-    // node.size has actually changed). Catches direct mutations of
-    // node.size[] that ComfyUI's auto-resize might do behind setSize's
-    // back, and re-pins the wrapper height/width so the DOM widget never
-    // grows beyond the user-controlled node size.
+    // Continuous clamp — runs on every canvas redraw (cheap; just an
+    // array comparison). Catches direct mutations of node.size[] that
+    // ComfyUI's auto-resize might do behind setSize's back. No need to
+    // setDirtyCanvas — we're already inside a draw pass, and the next
+    // frame naturally picks up the new size.
     const onDrawForegroundClamp = node.onDrawForeground;
     node.onDrawForeground = function () {
         clampSize();
-        syncWrapperSize();
         return onDrawForegroundClamp?.apply(this, arguments);
     };
 
@@ -1597,11 +1523,6 @@ function setupStickyNote(node) {
     const onConfigure = node.onConfigure;
     node.onConfigure = function (o) {
         onConfigure?.apply(this, arguments);
-        // Always force-uncollapse on load. Saved workflows from older
-        // builds (or pre-this-fix tests) often carry flags.collapsed=true
-        // which would render the node as a tiny title chip with no body.
-        node.flags = node.flags || {};
-        node.flags.collapsed = false;
         // Clamp legacy oversized node.size from saved workflows where
         // the node had exploded under an earlier version of this code.
         if (node.size && (node.size[0] > MAX_W || node.size[1] > MAX_H)) {
