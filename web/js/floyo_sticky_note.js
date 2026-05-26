@@ -1208,33 +1208,23 @@ function setupStickyNote(node) {
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
 
         // ── 1. Custom collapse/expand chevron in the title bar ──
-        // LiteGraph's native chevron is a thin 7-px circle/dot that
-        // visually doesn't belong with the pixel-art ArcadePixelNeue
-        // title text. We draw a solid triangle in white at the same
-        // location, sized to read at a glance:
-        //   ▶  when collapsed (chevron points to the hidden body)
-        //   ▼  when expanded  (chevron points down at the open body)
-        // The native click region underneath still handles the toggle
-        // — we just paint a better-looking icon on top.
-        const chevCx = 14;             // horizontal center of chevron
-        const chevCy = -titleH / 2;    // vertical center within title bar
-        const chevR  = 5;              // chevron half-size (so visual ≈ 10 px)
+        // The Figma K-Sampler reference uses a chunky pixel-art chevron
+        // that visually matches the ArcadePixelNeue title text. Drawing
+        // a smooth ctx.fill() triangle gave anti-aliased edges that
+        // looked out of place; instead we render the chevron as a font
+        // glyph in ArcadePixelNeue itself so it inherits the same
+        // pixel-art rendering as the title.
+        //   "v"  when expanded  (points at the open body below)
+        //   ">"  when collapsed (points at the hidden body to the right)
+        // The native LiteGraph chevron click region underneath still
+        // handles the toggle — we just paint a better-looking icon over.
         ctx.save();
+        ctx.font = `18px "ArcadePixelNeue", "Courier New", monospace`;
         ctx.fillStyle = "#FFFFFF";
-        ctx.beginPath();
-        if (node.flags?.collapsed) {
-            // ▶ — pointing right
-            ctx.moveTo(chevCx - chevR + 1, chevCy - chevR);
-            ctx.lineTo(chevCx - chevR + 1, chevCy + chevR);
-            ctx.lineTo(chevCx + chevR,     chevCy);
-        } else {
-            // ▼ — pointing down
-            ctx.moveTo(chevCx - chevR,     chevCy - chevR + 1);
-            ctx.lineTo(chevCx + chevR,     chevCy - chevR + 1);
-            ctx.lineTo(chevCx,             chevCy + chevR);
-        }
-        ctx.closePath();
-        ctx.fill();
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        const chevChar = node.flags?.collapsed ? ">" : "v";
+        ctx.fillText(chevChar, 14, -titleH / 2 + 1);
         ctx.restore();
 
         // ── 2. Custom title text in Arcade font ──
