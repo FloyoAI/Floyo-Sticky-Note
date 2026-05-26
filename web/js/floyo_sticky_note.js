@@ -1555,7 +1555,15 @@ function setupStickyNote(node) {
         if (node.size[1] < MIN_H) { node.size[1] = MIN_H; changed = true; }
         return changed;
     }
-    if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
+    // Initial size: upgrade to a usable default the first time the node
+    // is created.  `node.computeSize()` returns [MIN_W, MIN_H] which
+    // LiteGraph uses as the default, so we can't compare with `< MIN`
+    // (the strict less-than would never trip and the node would stay
+    // pinned at the tiny chip size).  Compare with the default sentinel
+    // instead — anything around the minimum gets upgraded to 480×480.
+    const isFreshNode = !node.size ||
+        (node.size[0] <= MIN_W + 1 && node.size[1] <= MIN_H + 1);
+    if (isFreshNode) {
         node.setSize([480, 480]);
     } else {
         clampSize();
