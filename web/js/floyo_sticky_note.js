@@ -801,6 +801,14 @@ app.registerExtension({
                 // in Arcade font inside onDrawForeground (set up later).
                 this.title = "";
                 this.getTitle = function () { return ""; };
+                // Always start UN-collapsed. Workflow JSON sometimes pins
+                // flags.collapsed=true on freshly-added nodes (or a stray
+                // click on the chevron during the same session collapses
+                // it), which makes the node look like a tiny title chip
+                // with no visible body. Force it open here so the user
+                // never sees a "broken-looking" sticky note on first add.
+                this.flags = this.flags || {};
+                this.flags.collapsed = false;
             } catch (e) { console.warn("[Floyo Sticky Note] early theme failed:", e); }
 
             const r = onNodeCreated?.apply(this, arguments);
@@ -1216,13 +1224,24 @@ function setupStickyNote(node) {
     //  widget — this catches those.)
     const titleH = (window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30;
 
-    // Collapse / expand click handling is provided by LiteGraph's
-    // NATIVE chevron region (the small clickable spot LiteGraph draws
-    // at the left of the title bar — clicking it toggles
-    // node.flags.collapsed). We paint our own larger, pixel-art-style
-    // chevron over the top in onDrawForeground so the icon visually
-    // matches the ArcadePixelNeue title; the click region underneath
-    // is still LiteGraph's, so no extra mouse plumbing is needed.
+    // Collapse / expand click handling — LiteGraph has a NATIVE
+    // chevron click region at the left of the title bar, but if its
+    // position doesn't line up exactly with where we paint our custom
+    // chevron the user's click can fall in a "dead zone" and nothing
+    // happens. We add our own explicit handler over the top 22 px of
+    // the left-title-bar so toggling collapse always works regardless
+    // of LiteGraph version.
+    const origOnMouseDown = node.onMouseDown;
+    node.onMouseDown = function (e, pos /*, graphCanvas */) {
+        if (pos && pos[0] >= 0 && pos[0] < 24 &&
+            pos[1] <= 0 && pos[1] >= -((window.LiteGraph?.NODE_TITLE_HEIGHT) ?? 30) - 4) {
+            node.flags = node.flags || {};
+            node.flags.collapsed = !node.flags.collapsed;
+            node.setDirtyCanvas(true, true);
+            return true; // consume — don't fall through to LiteGraph's own toggle
+        }
+        return origOnMouseDown?.apply(this, arguments);
+    };
 
     node.onDblClick = function (e, pos /*, graphCanvas */) {
         // Title-bar zone — open rename prompt.
@@ -1563,6 +1582,11 @@ function setupStickyNote(node) {
     const onConfigure = node.onConfigure;
     node.onConfigure = function (o) {
         onConfigure?.apply(this, arguments);
+        // Always force-uncollapse on load. Saved workflows from older
+        // builds (or pre-this-fix tests) often carry flags.collapsed=true
+        // which would render the node as a tiny title chip with no body.
+        node.flags = node.flags || {};
+        node.flags.collapsed = false;
         // Clamp legacy oversized node.size from saved workflows where
         // the node had exploded under an earlier version of this code.
         if (node.size && (node.size[0] > MAX_W || node.size[1] > MAX_H)) {
