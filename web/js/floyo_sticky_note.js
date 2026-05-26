@@ -15,10 +15,6 @@
 
 import { app } from "../../../scripts/app.js";
 
-// Top-level marker — if you don't see this in the browser console then the
-// JS file is not being loaded by ComfyUI at all.
-console.log("%c[Floyo Sticky Note] module loaded — build 2026-05-23-resize-debug", "color:#A78BFA;font-weight:700");
-
 /* ─── Asset URLs (resolved relative to this JS file) ──────────────────── */
 //
 // ComfyUI serves the package's `web/` folder at /extensions/<pkg>/. By
@@ -40,7 +36,6 @@ const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
         document.fonts.add(face);
         // Force any node currently on the canvas to repaint with the new font.
         app?.graph?.setDirtyCanvas?.(true, true);
-        console.log("[Floyo Sticky Note] Arcade font loaded");
     } catch (e) {
         console.warn("[Floyo Sticky Note] Arcade font load failed:", e);
     }
@@ -791,7 +786,6 @@ app.registerExtension({
     name: "Floyo.StickyNote",
     async beforeRegisterNodeDef(nodeType, nodeData /*, app */) {
         if (nodeData.name !== "FloyoStickyNote") return;
-        console.log("[Floyo Sticky Note] patching node class FloyoStickyNote");
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
@@ -811,9 +805,7 @@ app.registerExtension({
 
             const r = onNodeCreated?.apply(this, arguments);
             try {
-                console.log("[Floyo Sticky Note] onNodeCreated — setting up widget");
                 setupStickyNote(this);
-                console.log("[Floyo Sticky Note] setup complete");
             } catch (err) {
                 console.error("[Floyo Sticky Note] setup failed:", err);
                 // Surface the error visibly inside the node so the user
@@ -1167,8 +1159,6 @@ function setupStickyNote(node) {
         e.stopPropagation();
         const act = btn.dataset.act;
         if (act === "smaller" || act === "bigger") {
-            const tag = selectedMedia.classList.contains("floyo-embed") ? "embed" : "img";
-            const beforeRect  = selectedMedia.getBoundingClientRect();
             // Snapshot the node size BEFORE the resize. If anything grows
             // the node as a side-effect, we'll snap it back.
             const lockedSize = node.size ? [...node.size] : null;
@@ -1194,16 +1184,6 @@ function setupStickyNote(node) {
             requestAnimationFrame(() => {
                 restoreNodeSize();
                 positionMediaTools(selectedMedia);
-                const afterRect = selectedMedia.getBoundingClientRect();
-                console.log("%c[Floyo resize]", "color:#FBBF24;font-weight:700", {
-                    tag, act,
-                    before:  { w: Math.round(beforeRect.width),  h: Math.round(beforeRect.height) },
-                    setWidth: newW,
-                    after:   { w: Math.round(afterRect.width),   h: Math.round(afterRect.height) },
-                    bodyClientW: body.clientWidth,
-                    nodeSizeLocked: lockedSize ? lockedSize[1] : null,
-                    nodeSizeAfter:  node.size ? node.size[1] : null,
-                });
             });
             // One more snap-back on the NEXT frame in case ComfyUI
             // re-runs its own layout after ours.
@@ -1522,30 +1502,6 @@ function setupStickyNote(node) {
     const MIN_W = 180, MIN_H = 60;
     const MAX_W = 1600, MAX_H = 800;
 
-    // ── Debug: trace every node.size change so we can see WHO is
-    // growing the node and from where. Poll every 200 ms; on every
-    // change, dump the old/new values + a stack to identify the
-    // caller.
-    let lastSize = node.size ? [...node.size] : [0, 0];
-    const sizeMon = setInterval(() => {
-        if (!node.size) return;
-        if (node.size[0] !== lastSize[0] || node.size[1] !== lastSize[1]) {
-            console.log(
-                "%c[Floyo size]",
-                "color:#FBBF24;font-weight:700",
-                "was", [...lastSize],
-                "→ now", [...node.size],
-                "  (delta", [node.size[0] - lastSize[0], node.size[1] - lastSize[1]], ")"
-            );
-            lastSize = [...node.size];
-        }
-    }, 200);
-    // Clean up on removal so we don't leak.
-    const _origRemovedSize = node.onRemoved;
-    node.onRemoved = function () {
-        clearInterval(sizeMon);
-        return _origRemovedSize?.apply(this, arguments);
-    };
     function clampSize() {
         if (!node.size) return false;
         let changed = false;
