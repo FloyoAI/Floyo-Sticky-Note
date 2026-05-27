@@ -1267,6 +1267,24 @@ function setupStickyNote(node) {
         const [w, h] = node.size;
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
 
+        // ── 0. Repaint the title bar with our theme colour ──
+        // ComfyUI's frontend draws the native node title TEXT (the
+        // Python class name "FloyoStickyNote") on the title-bar
+        // background BEFORE onDrawForeground runs. Setting node.title
+        // or overriding getTitle() suppresses our INSTANCE title but
+        // in v3 the frontend can still fall back to node.type when
+        // node.title is empty, so we get the raw class name baked
+        // into the title-bar paint.
+        //
+        // We can't undo that paint, but we CAN cover it: fill the
+        // entire title-bar rectangle with our header colour again,
+        // wiping the native text. Then we draw our chevron and the
+        // custom Arcade-font title cleanly on top.
+        ctx.save();
+        ctx.fillStyle = t.header;
+        ctx.fillRect(0, -titleH, w, titleH);
+        ctx.restore();
+
         // ── 1. Custom collapse/expand chevron in the title bar ──
         // The Figma K-Sampler reference uses a chunky pixel-art chevron
         // that visually matches the ArcadePixelNeue title text. Drawing
@@ -1295,7 +1313,11 @@ function setupStickyNote(node) {
         // Letter-spacing of 2 px per Matt's Slack feedback ("a little
         // more letter spacing so the letters are a little more far
         // apart") — same wider rhythm as the Floyo wordmark itself.
-        if (node.properties.title) {
+        // ALWAYS draws (no `if` guard) so the title can never end up
+        // blank — falls back to DEFAULT_TITLE if properties.title is
+        // empty for whatever reason.
+        {
+            const titleText = node.properties.title || DEFAULT_TITLE;
             ctx.save();
             ctx.font = `18px "ArcadePixelNeue", "Courier New", monospace`;
             ctx.fillStyle = "#FFFFFF";
@@ -1309,7 +1331,7 @@ function setupStickyNote(node) {
             // Leave room for our custom chevron (~28 px from the left
             // edge of the title bar so it visually sits in the same
             // slot as LiteGraph's native handle).
-            ctx.fillText(node.properties.title, 28, -titleH / 2 + 1);
+            ctx.fillText(titleText, 28, -titleH / 2 + 1);
             ctx.restore();
         }
 
