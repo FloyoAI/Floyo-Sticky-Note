@@ -1232,18 +1232,54 @@ function setupStickyNote(node) {
         // text size and rhythm. Bold made the pixel font look heavier
         // than the reference; the typeface itself is already a pixel
         // hand so it doesn't need a bold modifier.
+        // Letter-spacing of 2 px per Matt's Slack feedback ("a little
+        // more letter spacing so the letters are a little more far
+        // apart") — same wider rhythm as the Floyo wordmark itself.
         if (node.properties.title) {
             ctx.save();
             ctx.font = `18px "ArcadePixelNeue", "Courier New", monospace`;
             ctx.fillStyle = "#FFFFFF";
             ctx.textBaseline = "middle";
             ctx.textAlign = "left";
+            // `letterSpacing` on Canvas2D is supported in Chrome 99+ /
+            // Safari 16.4+ / Firefox 110+ — well within the ComfyUI
+            // frontend's browser support window. Older browsers just
+            // ignore it gracefully, so it's a safe progressive add.
+            try { ctx.letterSpacing = "2px"; } catch (_) {}
             // Leave room for our custom chevron (~28 px from the left
             // edge of the title bar so it visually sits in the same
             // slot as LiteGraph's native handle).
             ctx.fillText(node.properties.title, 28, -titleH / 2 + 1);
             ctx.restore();
         }
+
+        // ── 2b. Themed outline around the whole node (Matt's feedback) ──
+        // "outlines around the node, just one color number higher"
+        // — themes already store `border` which is exactly one step
+        // up the brand ramp from `bg` (ube-6 vs ube-7), so we trace
+        // the node rect with it.  2 px stroke INSIDE the node so it
+        // hugs the rounded corners without bleeding into the canvas.
+        ctx.save();
+        ctx.strokeStyle = t.border;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = "round";
+        // LiteGraph rounds corners with NODE_TITLE_HEIGHT / 2 — match
+        // it so our outline doesn't square off where the chrome curves.
+        const radius = 8;
+        const x0 = 1, y0 = -titleH + 1, x1 = w - 1, y1 = h - 1;
+        ctx.beginPath();
+        ctx.moveTo(x0 + radius, y0);
+        ctx.lineTo(x1 - radius, y0);
+        ctx.quadraticCurveTo(x1, y0, x1, y0 + radius);
+        ctx.lineTo(x1, y1 - radius);
+        ctx.quadraticCurveTo(x1, y1, x1 - radius, y1);
+        ctx.lineTo(x0 + radius, y1);
+        ctx.quadraticCurveTo(x0, y1, x0, y1 - radius);
+        ctx.lineTo(x0, y0 + radius);
+        ctx.quadraticCurveTo(x0, y0, x0 + radius, y0);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
 
         // Skip drawing the notch while collapsed — the node has no body
         // to attach it to, and a notch floating around nothing looks weird.
