@@ -623,38 +623,38 @@ const STYLES = `
     flex: 0 0 auto;
 }
 
+/* Compass — Matt's Figma 970-485 spec:
+   - inactive wedges: outlined with white@30% stroke, no fill
+   - active wedge:    filled with white@30% (#FFFFFF4D)
+   - the original Figma "default state" fills one wedge with #D9D9D9
+     to show the look; we treat that as the visual reference and pick
+     #FFFFFF4D for the active state so it works on any theme bg. */
 .floyo-footer-pointer {
-    color: var(--text-mute);
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
     flex: 0 0 auto;
-}
-.floyo-pointer-svg { display: block; width: 28px; height: 28px; }
-.floyo-pointer-arrow {
-    fill: var(--text-mute);
-    opacity: 0.7;
-    cursor: pointer;
-    transition: fill 120ms ease, opacity 120ms ease, transform 120ms ease;
-    transform-origin: 12px 12px;
-    /* Larger interactive padding around each arrow path so the click
-       target is comfortable even though the visual is small. */
-    stroke: transparent;
-    stroke-width: 4;
-    paint-order: stroke fill;
     pointer-events: all;
 }
+.floyo-pointer-svg { display: block; width: 32px; height: 22px; }
+.floyo-pointer-arrow {
+    fill: transparent;
+    stroke: rgba(255, 255, 255, 0.30);   /* #FFFFFF4D */
+    stroke-width: 1;
+    cursor: pointer;
+    pointer-events: all;
+    transition: fill 120ms ease, stroke 120ms ease, transform 120ms ease;
+}
 .floyo-pointer-arrow:hover {
-    fill: var(--accent);
-    opacity: 1;
+    fill: rgba(255, 255, 255, 0.15);
+    stroke: rgba(255, 255, 255, 0.55);
 }
 .floyo-pointer-arrow.is-active {
-    fill: #fff;
-    opacity: 1;
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.55));
+    fill: rgba(255, 255, 255, 0.30);     /* #FFFFFF4D */
+    stroke: rgba(255, 255, 255, 0.55);
 }
 .floyo-footer-swatches { display: flex; gap: 6px; }
 .floyo-swatch {
@@ -687,24 +687,29 @@ const STYLES = `
 }
 .floyo-footer-font:hover { border-color: rgba(255,255,255,0.3); }
 
+/* Save button — Matt's Figma 970-485 spec.
+   Background: Mint/Mint 4 #3CE195 (the same green as the pixel-art
+   tick glyph). 26×26 box with slight rounding (matches the edit
+   button's box style on the opposite end of the footer). */
 .floyo-footer-save {
-    background: var(--accent);
-    color: #0F0820;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
+    background: rgba(60, 225, 149, 0.18);
+    border: 1px solid #3CE195;
+    border-radius: 6px;
+    width: 26px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 120ms ease, box-shadow 120ms ease;
+    transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
     padding: 0;
 }
 .floyo-footer-save:hover {
     transform: scale(1.08);
-    box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
+    background: rgba(60, 225, 149, 0.30);
+    box-shadow: 0 0 0 2px rgba(60, 225, 149, 0.35);
 }
+.floyo-footer-save svg { display: block; }
 
 /* Font choices */
 .floyo-sticky-wrapper[data-font="Roboto"]  { font-family: "Roboto", sans-serif; }
@@ -1854,18 +1859,29 @@ function createFooter() {
 
     footer.appendChild(center);
 
-    // ── Pointer-direction compass ──
-    // BETWEEN center cluster and save button — gives the dropdown
-    // breathing room on its right (Ritik: "default button se aur right
-    // side me"). Bigger clickable area too.
+    // ── Pointer-direction compass — Matt's Figma 970-485 design ──
+    // Four polygons arranged like a compass rose, drawn at 26×18 (the
+    // Figma natural size) and scaled up via CSS. Each arrow is a
+    // proper triangle wedge (not an arrow-with-stem). Inactive = the
+    // top "Up" wedge filled with #D9D9D9 in the reference; the others
+    // are outlined with white@30%. We swap the FILL based on which
+    // direction is currently active so the selected wedge stands out.
     const pointer = document.createElement("div");
     pointer.className = "floyo-footer-pointer";
     pointer.title = "Pick a side for the node to point from";
-    pointer.innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" class="floyo-pointer-svg">
-        <path class="floyo-pointer-arrow" data-dir="up"    d="M12 2 L8.5 6 L10.8 6 L10.8 10.8 L13.2 10.8 L13.2 6 L15.5 6 Z"/>
-        <path class="floyo-pointer-arrow" data-dir="down"  d="M12 22 L15.5 18 L13.2 18 L13.2 13.2 L10.8 13.2 L10.8 18 L8.5 18 Z"/>
-        <path class="floyo-pointer-arrow" data-dir="left"  d="M2 12 L6 8.5 L6 10.8 L10.8 10.8 L10.8 13.2 L6 13.2 L6 15.5 Z"/>
-        <path class="floyo-pointer-arrow" data-dir="right" d="M22 12 L18 15.5 L18 13.2 L13.2 13.2 L13.2 10.8 L18 10.8 L18 8.5 Z"/>
+    // Up / Down / Left / Right wedges, anchored around the center of
+    // the 26×18 viewBox. Path data lifted from Matt's Figma SVG and
+    // tagged with data-dir so the existing click delegation still
+    // finds them.
+    pointer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 18" width="32" height="22" fill="none" aria-hidden="true" class="floyo-pointer-svg">
+        <path class="floyo-pointer-arrow" data-dir="up"
+              d="M11.7655 1.49994C12.1504 0.833273 13.1126 0.833272 13.4975 1.49994L15.5942 5.13152C15.9791 5.79818 15.498 6.63152 14.7282 6.63152H10.5348C9.76501 6.63152 9.28388 5.79818 9.66878 5.13152L11.7655 1.49994Z"/>
+        <path class="floyo-pointer-arrow" data-dir="down"
+              d="M13.4977 15.5527C13.1128 16.2194 12.1506 16.2194 11.7657 15.5527L9.66897 11.9211C9.28407 11.2545 9.7652 10.4211 10.535 10.4211L14.7284 10.4211C15.4982 10.4211 15.9793 11.2545 15.5944 11.9211L13.4977 15.5527Z"/>
+        <path class="floyo-pointer-arrow" data-dir="left"
+              d="M1.75 8.95905C1.43765 8.77862 1.41815 8.34503 1.69141 8.13287L1.75 8.09283L5.38184 5.99616C5.71511 5.8041 6.13184 6.04499 6.13184 6.42975L6.13184 10.6231C6.13173 11.0079 5.71511 11.2481 5.38184 11.0557L1.75 8.95905Z"/>
+        <path class="floyo-pointer-arrow" data-dir="right"
+              d="M23.5132 8.09351C23.8255 8.27393 23.845 8.70753 23.5718 8.91968L23.5132 8.95972L19.8813 11.0564C19.5481 11.2485 19.1313 11.0076 19.1313 10.6228L19.1313 6.42944C19.1314 6.04466 19.5481 5.80449 19.8813 5.99683L23.5132 8.09351Z"/>
     </svg>`;
     footer.appendChild(pointer);
 
@@ -1874,8 +1890,9 @@ function createFooter() {
     save.type = "button";
     save.className = "floyo-footer-save";
     save.title = "Save & close editor";
-    save.innerHTML = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-        <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M3 8.2 L6.6 11.8 L13 4.6"/>
+    // Pixel-art check from Matt's Figma 970-485 — Mint/Mint 4 #3CE195
+    save.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M9.33301 14L4.66699 14V12.833L9.33301 12.833V14ZM4.66699 12.833H2.33301L2.33301 11.667H4.66699V12.833ZM11.667 12.833H9.33301V11.667H11.667V12.833ZM2.33301 11.667H1.16699L1.16699 9.33301H2.33301V11.667ZM12.833 11.667H11.667V9.33301H12.833V11.667ZM6.41699 10.5H5.25V9.33301H6.41699V10.5ZM1.16699 9.33301H0L0 4.66699H1.16699L1.16699 9.33301ZM5.25 9.33301H4.08301V8.16699H5.25V9.33301ZM7.58301 9.33301L6.41699 9.33301V8.16699L7.58301 8.16699V9.33301ZM14 9.33301H12.833L12.833 4.66699H14L14 9.33301ZM4.08301 8.16699H2.91699V7L4.08301 7V8.16699ZM8.75 8.16699H7.58301V7H8.75L8.75 8.16699ZM9.91699 7H8.75V5.83301H9.91699V7ZM11.083 5.83301L9.91699 5.83301V4.66699L11.083 4.66699V5.83301ZM2.33301 4.66699H1.16699L1.16699 2.33301L2.33301 2.33301V4.66699ZM12.833 4.66699H11.083V3.5H11.667V2.33301L12.833 2.33301V4.66699ZM4.66699 2.33301H2.33301L2.33301 1.16699L4.66699 1.16699V2.33301ZM11.667 2.33301H9.33301V1.16699L11.667 1.16699V2.33301ZM9.33301 0V1.16699L4.66699 1.16699V0L9.33301 0Z" fill="#3CE195"/>
     </svg>`;
     footer.appendChild(save);
 
