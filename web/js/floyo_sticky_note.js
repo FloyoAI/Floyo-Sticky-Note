@@ -57,13 +57,17 @@ const ARCADE_OTF = () => assetUrl("ArcadePixelNeue.otf");
 // canvas redraws over the next ~1 s to repaint any nodes that came in
 // while the font was still loading.
 let __floyoFontReady = false;
+let __floyoFontFacePromise = null;
 async function loadArcadeFont() {
-    if (__floyoFontReady) return;
     try {
-        const face = new FontFace("ArcadePixelNeue", `url("${ARCADE_OTF()}")`);
-        await face.load();
-        document.fonts.add(face);
-        // Wait until the canvas font cache actually contains this face.
+        __floyoFontFacePromise ??= (async () => {
+            const face = new FontFace("ArcadePixelNeue", `url("${ARCADE_OTF()}")`);
+            await face.load();
+            document.fonts.add(face);
+        })();
+        await __floyoFontFacePromise;
+        // Wait until both the canvas cache and the CSS @font-face are ready.
+        await document.fonts.load('14px "ArcadePixelNeue"');
         await document.fonts.load('18px "ArcadePixelNeue"');
         __floyoFontReady = true;
         // Repaint several times to catch any node added during load.
@@ -425,15 +429,15 @@ const STYLES = `
 
 /* Rich-text styles inside body */
 .floyo-sticky-body h1 {
-    font-size: 10px; font-weight: 600; margin: 0 0 8px;
+    font-size: 14px; font-weight: 700; margin: 0 0 9px;
     letter-spacing: 0; color: #fff; line-height: 1.5;
 }
 .floyo-sticky-body h2 {
-    font-size: 10px; font-weight: 600; margin: 14px 0 6px;
+    font-size: 12px; font-weight: 700; margin: 13px 0 7px;
     color: #fff; line-height: 1.5;
 }
 .floyo-sticky-body h3 {
-    font-size: 10px; font-weight: 600; margin: 12px 0 4px;
+    font-size: 10px; font-weight: 700; margin: 11px 0 5px;
     color: #fff; line-height: 1.5;
 }
 .floyo-sticky-body p { margin: 0 0 8px; color: rgba(255, 255, 255, 0.70); }
@@ -654,7 +658,8 @@ const STYLES = `
     width: auto;
     flex: 0 0 auto;
     user-select: none;
-    pointer-events: none;
+    pointer-events: all;
+    cursor: pointer;
     opacity: 0.95;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
 }
@@ -1956,6 +1961,16 @@ function createFooter() {
     logo.src = FLOYO_LOGO();
     logo.alt = "Floyo";
     logo.draggable = false;
+    logo.title = "Open Floyo";
+    logo.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+    logo.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open("https://www.floyo.ai", "_blank", "noopener,noreferrer");
+    });
     footer.appendChild(logo);
 
     // ── Center cluster: theme swatches ──
