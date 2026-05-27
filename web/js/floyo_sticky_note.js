@@ -33,14 +33,30 @@ const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
 // Preload the Arcade font so the title text renders with it without a
 // flash of the system fallback. The CSS @font-face below is the canonical
 // declaration; this `FontFace` add just guarantees a load promise.
+//
+// Canvas2D ignores fonts that aren't already loaded at the moment of
+// fillText (no implicit wait), so on top of registering the face we
+// also explicitly call `document.fonts.load("18px ArcadePixelNeue")`
+// — that returns a promise we can await to be SURE the rasterised
+// glyph cache is ready before the first paint. Then we fire repeated
+// canvas redraws over the next ~1 s to repaint any nodes that came in
+// while the font was still loading.
+let __floyoFontReady = false;
 (async function loadArcadeFont() {
     try {
         const face = new FontFace("ArcadePixelNeue", `url("${ARCADE_OTF}")`);
         await face.load();
         document.fonts.add(face);
-        // Force any node currently on the canvas to repaint with the new font.
-        app?.graph?.setDirtyCanvas?.(true, true);
-        console.log("[Floyo Sticky Note] Arcade font loaded");
+        // Wait until the canvas font cache actually contains this face.
+        await document.fonts.load('18px "ArcadePixelNeue"');
+        __floyoFontReady = true;
+        console.log("[Floyo Sticky Note] Arcade font ready for canvas");
+        // Repaint several times to catch any node added during load.
+        const repaint = () => app?.graph?.setDirtyCanvas?.(true, true);
+        repaint();
+        setTimeout(repaint, 100);
+        setTimeout(repaint, 500);
+        setTimeout(repaint, 1500);
     } catch (e) {
         console.warn("[Floyo Sticky Note] Arcade font load failed:", e);
     }
@@ -48,45 +64,62 @@ const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
 
 /* ─── Themes ──────────────────────────────────────────────────────────── */
 
+// Theme palette from Matt's Slack screenshot — fill is the brand
+// "n-7 / n-8 / n-9" colour, outline is exactly one ramp-step lighter
+// (e.g. Ube7 fill #3A206B → Ube6 outline #543294). Keys preserved
+// (purple/blue/green/grey) so existing saved workflows keep loading.
 const THEMES = {
-    purple: {
-        bg:         "#2D1B69",
-        bgGradient: "linear-gradient(180deg, #3D2876 0%, #241354 100%)",
-        header:     "#7C3AED",
-        headerHover:"#8B5CF6",
-        toolbar:    "rgba(20, 8, 56, 0.55)",
+    purple: {                              // Matt: Ube 7
+        bg:         "#3A206B",             // fill
+        bgGradient: "linear-gradient(180deg, #4A2D80 0%, #2F1A55 100%)",
+        header:     "#5C3094",             // title bar — slightly brighter than body
+        headerHover:"#6B40A6",
+        toolbar:    "rgba(28, 14, 60, 0.55)",
         text:       "#EDE9FE",
         textMuted:  "#C4B5FD",
         accent:     "#A78BFA",
-        border:     "#5B21B6",
+        border:     "#543294",             // outline — Matt: Ube 6
         codeBg:     "#1A0F3D",
         swatch:     "#A78BFA",
     },
-    blue: {
-        bg:         "#1E3A8A",
-        bgGradient: "linear-gradient(180deg, #2B4FC9 0%, #17307A 100%)",
-        header:     "#3B82F6",
-        headerHover:"#60A5FA",
-        toolbar:    "rgba(7, 21, 70, 0.55)",
+    blue: {                                // Matt: Blueberry 8
+        bg:         "#192765",             // fill
+        bgGradient: "linear-gradient(180deg, #233480 0%, #131F50 100%)",
+        header:     "#2E419E",
+        headerHover:"#3D52B3",
+        toolbar:    "rgba(7, 14, 50, 0.55)",
         text:       "#DBEAFE",
         textMuted:  "#93C5FD",
         accent:     "#60A5FA",
-        border:     "#1D4ED8",
-        codeBg:     "#0F1E5C",
+        border:     "#2E419E",             // outline — Matt: Blueberry 7
+        codeBg:     "#0F1745",
         swatch:     "#60A5FA",
     },
-    green: {
-        bg:         "#064E3B",
-        bgGradient: "linear-gradient(180deg, #0A6849 0%, #04382A 100%)",
-        header:     "#10B981",
-        headerHover:"#34D399",
-        toolbar:    "rgba(2, 32, 22, 0.55)",
+    green: {                               // Matt: Mint 9
+        bg:         "#002514",             // fill
+        bgGradient: "linear-gradient(180deg, #013820 0%, #001A0F 100%)",
+        header:     "#01341C",
+        headerHover:"#024A28",
+        toolbar:    "rgba(0, 18, 10, 0.55)",
         text:       "#D1FAE5",
         textMuted:  "#6EE7B7",
         accent:     "#34D399",
-        border:     "#047857",
-        codeBg:     "#022C20",
+        border:     "#01341C",             // outline — Matt: Mint 8
+        codeBg:     "#001A0E",
         swatch:     "#34D399",
+    },
+    grey: {                                // Matt: Custom Grey
+        bg:         "#222222",             // fill
+        bgGradient: "linear-gradient(180deg, #2A2A2A 0%, #1A1A1A 100%)",
+        header:     "#333333",
+        headerHover:"#404040",
+        toolbar:    "rgba(15, 15, 15, 0.55)",
+        text:       "#F4F4F5",
+        textMuted:  "#A1A1AA",
+        accent:     "#D4D4D8",
+        border:     "#333333",             // outline — one step lighter
+        codeBg:     "#171717",
+        swatch:     "#737373",
     },
 };
 
@@ -210,6 +243,13 @@ const STYLES = `
     --toolbar:${THEMES.green.toolbar}; --text:${THEMES.green.text};
     --text-mute:${THEMES.green.textMuted}; --accent:${THEMES.green.accent};
     --border:${THEMES.green.border}; --code-bg:${THEMES.green.codeBg};
+}
+.floyo-sticky-wrapper[data-theme="grey"] {
+    --bg:${THEMES.grey.bg}; --bg-grad:${THEMES.grey.bgGradient};
+    --header:${THEMES.grey.header}; --hover:${THEMES.grey.headerHover};
+    --toolbar:${THEMES.grey.toolbar}; --text:${THEMES.grey.text};
+    --text-mute:${THEMES.grey.textMuted}; --accent:${THEMES.grey.accent};
+    --border:${THEMES.grey.border}; --code-bg:${THEMES.grey.codeBg};
 }
 
 /* ── Toolbar (editor mode only) ── */
@@ -621,6 +661,7 @@ const STYLES = `
 .floyo-swatch.swatch-purple { background: ${THEMES.purple.swatch}; }
 .floyo-swatch.swatch-blue   { background: ${THEMES.blue.swatch}; }
 .floyo-swatch.swatch-green  { background: ${THEMES.green.swatch}; }
+.floyo-swatch.swatch-grey   { background: ${THEMES.grey.swatch}; }
 
 .floyo-footer-font {
     background: rgba(255,255,255,0.08);
@@ -1776,7 +1817,7 @@ function createFooter() {
 
     const swatches = document.createElement("div");
     swatches.className = "floyo-footer-swatches";
-    ["purple", "blue", "green"].forEach((t) => {
+    ["purple", "blue", "green", "grey"].forEach((t) => {
         const sw = document.createElement("button");
         sw.type = "button";
         sw.className = `floyo-swatch swatch-${t}`;
