@@ -21,7 +21,22 @@ import { app } from "../../../scripts/app.js";
 // resolving the URL from `import.meta.url` we don't have to hard-code the
 // package name — it works regardless of what folder name the user clones
 // the repo into.
-const ASSETS_URL = new URL("../assets/", import.meta.url).href;
+function resolveAssetsUrl() {
+    const direct = new URL("../assets/", import.meta.url).href;
+    try {
+        const source = new URL(import.meta.url);
+        const extMatch = source.pathname.match(/\/extensions\/([^/]+)\//);
+        const proxyResource = performance.getEntriesByType("resource")
+            .map((entry) => entry.name)
+            .find((name) => name.includes("/api/comfyui-proxy/") && name.includes("/api/"));
+        if (source.hostname.startsWith("dispatch.") && extMatch && proxyResource) {
+            const proxyBase = proxyResource.replace(/\/api\/.*$/, "");
+            return `${proxyBase}/extensions/${extMatch[1]}/assets/`;
+        }
+    } catch {}
+    return direct;
+}
+const ASSETS_URL = resolveAssetsUrl();
 const FLOYO_LOGO = `${ASSETS_URL}floyo-logo.png`;
 const YO_LOGO    = `${ASSETS_URL}yo-circle.png`;
 const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
