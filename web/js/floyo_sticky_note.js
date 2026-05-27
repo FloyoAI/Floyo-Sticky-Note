@@ -15,10 +15,6 @@
 
 import { app } from "../../../scripts/app.js";
 
-// Top-level marker — if you don't see this in the browser console then the
-// JS file is not being loaded by ComfyUI at all.
-console.log("%c[Floyo Sticky Note] module loaded — build 2026-05-23-resize-debug", "color:#A78BFA;font-weight:700");
-
 /* ─── Asset URLs (resolved relative to this JS file) ──────────────────── */
 //
 // ComfyUI serves the package's `web/` folder at /extensions/<pkg>/. By
@@ -50,16 +46,13 @@ let __floyoFontReady = false;
         // Wait until the canvas font cache actually contains this face.
         await document.fonts.load('18px "ArcadePixelNeue"');
         __floyoFontReady = true;
-        console.log("[Floyo Sticky Note] Arcade font ready for canvas");
         // Repaint several times to catch any node added during load.
         const repaint = () => app?.graph?.setDirtyCanvas?.(true, true);
         repaint();
         setTimeout(repaint, 100);
         setTimeout(repaint, 500);
         setTimeout(repaint, 1500);
-    } catch (e) {
-        console.warn("[Floyo Sticky Note] Arcade font load failed:", e);
-    }
+    } catch {}
 })();
 
 /* ─── Themes ──────────────────────────────────────────────────────────── */
@@ -71,10 +64,10 @@ let __floyoFontReady = false;
 const THEMES = {
     purple: {                              // Matt: Ube 7
         bg:         "#3A206B",             // fill
-        bgGradient: "linear-gradient(180deg, #4A2D80 0%, #2F1A55 100%)",
-        header:     "#5C3094",             // title bar — slightly brighter than body
-        headerHover:"#6B40A6",
-        toolbar:    "rgba(28, 14, 60, 0.55)",
+        bgGradient: "linear-gradient(180deg, #3A206B 0%, #351D61 100%)",
+        header:     "#2C1852",
+        headerHover:"#543294",
+        toolbar:    "#27144F",
         text:       "#EDE9FE",
         textMuted:  "#C4B5FD",
         accent:     "#A78BFA",
@@ -84,10 +77,10 @@ const THEMES = {
     },
     blue: {                                // Matt: Blueberry 8
         bg:         "#192765",             // fill
-        bgGradient: "linear-gradient(180deg, #233480 0%, #131F50 100%)",
-        header:     "#2E419E",
-        headerHover:"#3D52B3",
-        toolbar:    "rgba(7, 14, 50, 0.55)",
+        bgGradient: "linear-gradient(180deg, #192765 0%, #152156 100%)",
+        header:     "#101844",             // Figma: Blueberry 9 title strip
+        headerHover:"#2E419E",
+        toolbar:    "#101844",
         text:       "#DBEAFE",
         textMuted:  "#93C5FD",
         accent:     "#60A5FA",
@@ -97,10 +90,10 @@ const THEMES = {
     },
     green: {                               // Matt: Mint 9
         bg:         "#002514",             // fill
-        bgGradient: "linear-gradient(180deg, #013820 0%, #001A0F 100%)",
-        header:     "#01341C",
-        headerHover:"#024A28",
-        toolbar:    "rgba(0, 18, 10, 0.55)",
+        bgGradient: "linear-gradient(180deg, #002514 0%, #001D10 100%)",
+        header:     "#00170D",
+        headerHover:"#01341C",
+        toolbar:    "#00170D",
         text:       "#D1FAE5",
         textMuted:  "#6EE7B7",
         accent:     "#34D399",
@@ -110,10 +103,10 @@ const THEMES = {
     },
     grey: {                                // Matt: Custom Grey
         bg:         "#222222",             // fill
-        bgGradient: "linear-gradient(180deg, #2A2A2A 0%, #1A1A1A 100%)",
-        header:     "#333333",
+        bgGradient: "linear-gradient(180deg, #222222 0%, #1D1D1D 100%)",
+        header:     "#1A1A1A",
         headerHover:"#404040",
-        toolbar:    "rgba(15, 15, 15, 0.55)",
+        toolbar:    "#1A1A1A",
         text:       "#F4F4F5",
         textMuted:  "#A1A1AA",
         accent:     "#D4D4D8",
@@ -124,8 +117,11 @@ const THEMES = {
 };
 
 const DEFAULT_THEME = "purple";
-const FONT_OPTIONS = ["Default", "Arcade", "Janeiro", "Roboto"];
 const DEFAULT_TITLE = "Floyo Sticky Note";
+const NATIVE_TITLE_SENTINEL = "\u00A0";
+const TITLE_FONT = `14px "ArcadePixelNeue", "Courier New", monospace`;
+const TITLE_LETTER_SPACING = 0.7;
+const CHEVRON_COLOR = "#D5B8FF";
 // NOTE: the title lives in the LiteGraph title bar, not in the body —
 // so we don't duplicate it as an <h1> here. The default content below
 // doubles as a quick demo of every formatting feature: H1 / H2 / H3
@@ -212,6 +208,7 @@ const STYLES = `
     --code-bg:   ${THEMES.purple.codeBg};
 
     position: relative;
+    container-type: size;
     width: 100%;
     height: 100%;
     box-sizing: border-box;
@@ -225,8 +222,8 @@ const STYLES = `
     overflow: hidden;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 8px;
+    line-height: 1.5;
 }
 
 /* Theme overrides */
@@ -257,16 +254,14 @@ const STYLES = `
     flex: 0 0 auto;
     display: none;
     align-items: center;
-    justify-content: space-between;   /* spread items across the full
-                                         width so the panel stops looking
-                                         left-aligned with empty space on
-                                         the right */
-    flex-wrap: wrap;
-    gap: 1px;
-    padding: 5px 10px;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 5px 8px;
     background: var(--toolbar);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid rgba(0, 0, 0, 0.22);
+    overflow: hidden;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-toolbar { display: flex; }
 .floyo-tool-btn {
@@ -274,11 +269,11 @@ const STYLES = `
     color: var(--text);
     border: 1px solid transparent;
     border-radius: 5px;
-    height: 24px;
-    min-width: 22px;          /* tighter so all 13 buttons fit on one line */
-    padding: 0 4px;
-    font: inherit;
-    font-size: 11.5px;
+    height: 22px;
+    min-width: 18px;
+    padding: 0 3px;
+    font-family: "ArcadePixelNeue", "Courier New", monospace;
+    font-size: 10px;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
@@ -303,21 +298,33 @@ const STYLES = `
     width: 1px;
     height: 14px;
     background: rgba(255, 255, 255, 0.18);
-    margin: 0 3px;
+    margin: 0 2px;
+    flex: 0 0 auto;
 }
 
 /* ── Body (display + editor share this slot) ── */
 .floyo-sticky-body {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     overflow: auto;
-    padding: 12px 14px;
+    padding: 12px 20px;
     min-height: 0;
+    max-height: 100%;
     position: relative;
+    overscroll-behavior: contain;
+}
+.floyo-sticky-wrapper[data-mode="display"] .floyo-sticky-body {
+    padding-top: 10px;
+    padding-bottom: 14px;
+}
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
+    padding-bottom: 46px;
 }
 .floyo-sticky-display, .floyo-sticky-editor {
     outline: none;
     color: var(--text);
     word-wrap: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
 }
 .floyo-sticky-editor {
     display: none;
@@ -328,18 +335,20 @@ const STYLES = `
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-display { display: none; }
 
 /* ── Display-mode affordances ──────────────────────────────────────── */
-/* In display mode (read-only) we surface two small controls in the
-   wrapper's bottom row — an Edit pencil on the left to enter editor
-   mode, and a "grip" indicator on the right hinting at the LiteGraph
-   resize handle. Both hide when the user enters editor mode (the full
-   footer takes their place). Lives as a flex sibling of body so it
-   stays pinned at the bottom even as body content scrolls. */
+/* In display mode (read-only) we surface two small controls pinned over
+   the bottom corners — an Edit pencil on the left and a real resize
+   grip on the right. The body gets extra bottom padding in display mode
+   so long content scrolls behind neither affordance. */
 .floyo-display-actions {
-    flex: 0 0 auto;
+    position: absolute;
+    left: 18px;
+    right: 0;
+    bottom: 1px;
+    z-index: 3;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 12px 8px;
+    pointer-events: none;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
 
@@ -347,11 +356,11 @@ const STYLES = `
    Matt's Figma 930-4896. Square card, slight rounding, black fill so
    the pencil reads on every theme colour. */
 .floyo-display-edit {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     background: #000;
     border: none;
-    border-radius: 6px;
+    border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -369,42 +378,49 @@ const STYLES = `
    the black background regardless of theme. */
 .floyo-display-edit svg { display: block; }
 
-/* Resize-grip — three white diagonal lines at the bottom-right corner,
-   exactly the SVG Matt provided. 18×18 box, 0.3 opacity, white stroke,
-   round caps. Purely decorative — drag handle is LiteGraph's native
-   resize handle in the same corner. */
+/* Resize-grip — two subtle diagonal lines at the true bottom-right
+   corner, exactly the SVG Matt provided. It also handles pointer-drag
+   resize so the cursor + interaction match what the user sees. */
 .floyo-display-grip {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
+    align-items: flex-end;
+    justify-content: flex-end;
+    pointer-events: all;
+    cursor: nwse-resize;
     opacity: 0.3;
+    padding: 0;
+    touch-action: none;
 }
-.floyo-display-grip svg { display: block; }
+.floyo-display-grip svg {
+    display: block;
+    width: 13px;
+    height: 13px;
+    transform: translate(0, 0);
+}
 
 /* Rich-text styles inside body */
 .floyo-sticky-body h1 {
-    font-size: 22px; font-weight: 700; margin: 4px 0 8px;
-    letter-spacing: -0.2px; color: var(--text);
+    font-size: 10px; font-weight: 600; margin: 0 0 8px;
+    letter-spacing: 0; color: #fff; line-height: 1.5;
 }
 .floyo-sticky-body h2 {
-    font-size: 18px; font-weight: 700; margin: 14px 0 6px;
-    color: var(--text);
+    font-size: 10px; font-weight: 600; margin: 14px 0 6px;
+    color: #fff; line-height: 1.5;
 }
 .floyo-sticky-body h3 {
-    font-size: 15px; font-weight: 700; margin: 12px 0 4px;
-    color: var(--text);
+    font-size: 10px; font-weight: 600; margin: 12px 0 4px;
+    color: #fff; line-height: 1.5;
 }
-.floyo-sticky-body p { margin: 6px 0; }
+.floyo-sticky-body p { margin: 0 0 8px; color: rgba(255, 255, 255, 0.70); }
 .floyo-sticky-body b, .floyo-sticky-body strong { font-weight: 700; color: #fff; }
 .floyo-sticky-body i, .floyo-sticky-body em { font-style: italic; }
 .floyo-sticky-body u { text-decoration: underline; text-decoration-thickness: 1.5px; }
 .floyo-sticky-body s, .floyo-sticky-body strike { text-decoration: line-through; }
 .floyo-sticky-body code {
     font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
-    font-size: 12px;
+    font-size: 7px;
     background: var(--code-bg);
     padding: 1px 5px;
     border-radius: 4px;
@@ -412,7 +428,7 @@ const STYLES = `
 }
 .floyo-sticky-body pre {
     font-family: "SF Mono", Menlo, Consolas, "Courier New", monospace;
-    font-size: 12px;
+    font-size: 8px;
     background: var(--code-bg);
     padding: 10px 12px;
     border-radius: 8px;
@@ -542,7 +558,7 @@ const STYLES = `
     pointer-events: none;
     user-select: none;
 }
-.floyo-embed-play {
+.floyo-embed-open {
     position: absolute;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
@@ -559,11 +575,11 @@ const STYLES = `
     padding-left: 4px;   /* nudge the play triangle visually centred */
     transition: background 140ms ease, transform 140ms ease;
 }
-.floyo-embed-youtube .floyo-embed-play:hover {
+.floyo-embed-youtube .floyo-embed-open:hover {
     background: #FF0000;  /* YouTube red */
     transform: translate(-50%, -50%) scale(1.06);
 }
-.floyo-embed-vimeo .floyo-embed-play:hover {
+.floyo-embed-vimeo .floyo-embed-open:hover {
     background: #1AB7EA;  /* Vimeo cyan */
     transform: translate(-50%, -50%) scale(1.06);
 }
@@ -585,17 +601,24 @@ const STYLES = `
 
 /* ── Footer (editor mode only) ── */
 .floyo-sticky-footer {
-    flex: 0 0 auto;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
     display: none;
     align-items: center;
     justify-content: space-between;  /* logo left, center cluster mid,
                                         save right */
-    gap: 12px;
-    padding: 4px 12px;          /* reduced top/bottom — tighter to body */
+    gap: 8px;
+    flex-wrap: nowrap;
+    padding: 4px 10px;
     background: var(--toolbar);
     border-top: 1px solid rgba(0, 0, 0, 0.22);
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.04);
     min-height: 36px;
     box-sizing: border-box;
+    overflow: hidden;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
 
@@ -604,7 +627,7 @@ const STYLES = `
    "sure sure"), sized so it sits just slightly taller than the swatches
    — matches the Figma 902:277 bottom-right variant exactly. */
 .floyo-footer-logo {
-    height: 18px;
+    height: 24px;
     width: auto;
     flex: 0 0 auto;
     user-select: none;
@@ -620,7 +643,9 @@ const STYLES = `
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: nowrap;
     flex: 0 0 auto;
+    min-width: 0;
 }
 
 /* Compass — Matt's Figma 970-485 spec:
@@ -630,8 +655,8 @@ const STYLES = `
      to show the look; we treat that as the visual reference and pick
      #FFFFFF4D for the active state so it works on any theme bg. */
 .floyo-footer-pointer {
-    width: 36px;
-    height: 26px;
+    width: 32px;
+    height: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -639,7 +664,7 @@ const STYLES = `
     flex: 0 0 auto;
     pointer-events: all;
 }
-.floyo-pointer-svg { display: block; width: 32px; height: 22px; }
+.floyo-pointer-svg { display: block; width: 30px; height: 22px; }
 .floyo-pointer-arrow {
     fill: transparent;
     stroke: rgba(255, 255, 255, 0.30);   /* #FFFFFF4D */
@@ -649,54 +674,41 @@ const STYLES = `
     transition: fill 120ms ease, stroke 120ms ease, transform 120ms ease;
 }
 .floyo-pointer-arrow:hover {
-    fill: rgba(255, 255, 255, 0.15);
-    stroke: rgba(255, 255, 255, 0.55);
+    fill: rgba(255, 255, 255, 0.10);
+    stroke: rgba(255, 255, 255, 0.30);
 }
 .floyo-pointer-arrow.is-active {
     fill: rgba(255, 255, 255, 0.30);     /* #FFFFFF4D */
-    stroke: rgba(255, 255, 255, 0.55);
+    stroke: transparent;
 }
 .floyo-footer-swatches { display: flex; gap: 6px; }
 .floyo-swatch {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 4px;
-    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.16);
     cursor: pointer;
     padding: 0;
     transition: transform 120ms ease, border-color 120ms ease;
 }
 .floyo-swatch:hover { transform: scale(1.12); border-color: rgba(255,255,255,0.6); }
-.floyo-swatch.is-active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.18); }
+.floyo-swatch.is-active { border-color: rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 2px rgba(255,255,255,0.18); }
 .floyo-swatch.swatch-purple { background: ${THEMES.purple.swatch}; }
 .floyo-swatch.swatch-blue   { background: ${THEMES.blue.swatch}; }
 .floyo-swatch.swatch-green  { background: ${THEMES.green.swatch}; }
 .floyo-swatch.swatch-grey   { background: ${THEMES.grey.swatch}; }
-
-.floyo-footer-font {
-    background: rgba(255,255,255,0.08);
-    color: var(--text);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 6px;
-    font: inherit;
-    font-size: 11px;
-    height: 22px;
-    padding: 0 6px;
-    cursor: pointer;
-    outline: none;
-}
-.floyo-footer-font:hover { border-color: rgba(255,255,255,0.3); }
 
 /* Save button — Matt's Figma 970-485 spec.
    Background: Mint/Mint 4 #3CE195 (the same green as the pixel-art
    tick glyph). 26×26 box with slight rounding (matches the edit
    button's box style on the opposite end of the footer). */
 .floyo-footer-save {
-    background: rgba(60, 225, 149, 0.18);
-    border: 1px solid #3CE195;
-    border-radius: 6px;
-    width: 26px;
-    height: 26px;
+    background: rgba(60, 225, 149, 0.10);
+    border: 1px solid rgba(60, 225, 149, 0.18);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -706,10 +718,48 @@ const STYLES = `
 }
 .floyo-footer-save:hover {
     transform: scale(1.08);
-    background: rgba(60, 225, 149, 0.30);
-    box-shadow: 0 0 0 2px rgba(60, 225, 149, 0.35);
+    background: rgba(60, 225, 149, 0.18);
+    box-shadow: 0 0 0 1px rgba(60, 225, 149, 0.24);
 }
 .floyo-footer-save svg { display: block; }
+
+@container (max-width: 360px) {
+    .floyo-sticky-toolbar {
+        gap: 1px;
+        padding: 4px 6px;
+    }
+    .floyo-tool-btn {
+        min-width: 14px;
+        height: 20px;
+        padding: 0 2px;
+        font-size: 8px;
+        border-radius: 4px;
+    }
+    .floyo-tool-btn svg {
+        width: 10px;
+        height: 10px;
+    }
+    .floyo-tool-sep {
+        height: 12px;
+        margin: 0 1px;
+    }
+    .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
+        padding-bottom: 44px;
+    }
+    .floyo-sticky-footer {
+        gap: 3px;
+        min-height: 36px;
+        padding: 4px 5px;
+    }
+    .floyo-footer-logo { height: 12px; }
+    .floyo-footer-center { gap: 2px; }
+    .floyo-footer-swatches { gap: 2px; }
+    .floyo-swatch { width: 10px; height: 10px; border-radius: 3px; border-width: 1px; }
+    .floyo-footer-pointer { width: 22px; height: 18px; }
+    .floyo-pointer-svg { width: 22px; height: 18px; }
+    .floyo-footer-save { width: 20px; height: 20px; border-radius: 6px; border-color: rgba(60, 225, 149, 0.14); }
+    .floyo-footer-save svg { width: 11px; height: 11px; }
+}
 
 /* Font choices */
 .floyo-sticky-wrapper[data-font="Roboto"]  { font-family: "Roboto", sans-serif; }
@@ -841,8 +891,6 @@ app.registerExtension({
     name: "Floyo.StickyNote",
     async beforeRegisterNodeDef(nodeType, nodeData /*, app */) {
         if (nodeData.name !== "FloyoStickyNote") return;
-        console.log("[Floyo Sticky Note] patching node class FloyoStickyNote");
-
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             // ── BULLET-PROOF: apply the purple chrome theme IMMEDIATELY,
@@ -855,15 +903,17 @@ app.registerExtension({
                 this.boxcolor = t.border;
                 // Suppress LiteGraph's native title text. We draw our own
                 // in Arcade font inside onDrawForeground (set up later).
-                this.title = "";
-                this.getTitle = function () { return ""; };
-            } catch (e) { console.warn("[Floyo Sticky Note] early theme failed:", e); }
+                this.title = NATIVE_TITLE_SENTINEL;
+                this.getTitle = function () { return NATIVE_TITLE_SENTINEL; };
+                // ComfyUI v3 draws an external green package badge above
+                // custom nodes via node.drawBadges(). This note already has
+                // branded chrome, so suppress that badge for this node only.
+                this.drawBadges = function () {};
+            } catch {}
 
             const r = onNodeCreated?.apply(this, arguments);
             try {
-                console.log("[Floyo Sticky Note] onNodeCreated — setting up widget");
                 setupStickyNote(this);
-                console.log("[Floyo Sticky Note] setup complete");
             } catch (err) {
                 console.error("[Floyo Sticky Note] setup failed:", err);
                 // Surface the error visibly inside the node so the user
@@ -912,11 +962,12 @@ function setupStickyNote(node) {
     // Setting `node.title = ""` is not enough because LiteGraph's
     // `getTitle()` falls back to `node.constructor.title` (the registered
     // display name) when title is falsy — that's what was producing the
-    // double-rendered title. Overriding `getTitle()` to always return ""
+    // double-rendered title. Returning a non-empty blank sentinel
     // short-circuits the fallback. node.properties.title remains the
     // source of truth and is what we actually draw.
-    node.title = "";
-    node.getTitle = function () { return ""; };
+    node.title = NATIVE_TITLE_SENTINEL;
+    node.getTitle = function () { return NATIVE_TITLE_SENTINEL; };
+    node.drawBadges = function () {};
 
     // ── DOM ──
     const wrapper = document.createElement("div");
@@ -963,9 +1014,8 @@ function setupStickyNote(node) {
     // Both are hidden once the user enters editor mode.
     const displayActions = document.createElement("div");
     displayActions.className = "floyo-display-actions";
-    // Edit pencil + resize-grip use the EXACT SVGs Matt put in the
-    // Figma 930-4896 spec — pixel-art pencil (12×12 black-fill) and the
-    // three diagonal lines (18×18 white-stroke at 0.3 opacity). The
+    // Edit pencil + resize-grip use Matt's Figma affordances: pixel-art
+    // pencil (12×12 black-fill) and a tiny three-line resize mark. The
     // pencil's `fill="#fff"` overrides the original black so it reads on
     // the new black button background.
     displayActions.innerHTML = `
@@ -975,10 +1025,10 @@ function setupStickyNote(node) {
             </svg>
         </button>
         <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 19 19" fill="none" aria-hidden="true">
-                <line x1="18" y1="6.70711" x2="6.70711" y2="18" stroke="white" stroke-linecap="round"/>
-                <line x1="18" y1="12.7071" x2="12.7071" y2="18" stroke="white" stroke-linecap="round"/>
-                <line x1="18" y1="0.707107" x2="0.707107" y2="18" stroke="white" stroke-linecap="round"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
+                <line x1="12" y1="7" x2="7" y2="12" stroke="white" stroke-linecap="round"/>
+                <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
             </svg>
         </div>
     `;
@@ -1055,6 +1105,16 @@ function setupStickyNote(node) {
         e.stopPropagation();
         enterEditor();
     });
+    display.addEventListener("click", (e) => {
+        if (wrapper.dataset.mode !== "display") return;
+        const embed = e.target.closest(".floyo-embed");
+        if (!embed || !display.contains(embed)) return;
+        const url = videoEmbedUrl(embed);
+        if (!url) return;
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(url, "_blank", "noopener,noreferrer");
+    });
 
     // Edit pencil button (display-mode only) — single click enters editor.
     displayActions.querySelector(".floyo-display-edit")
@@ -1063,6 +1123,37 @@ function setupStickyNote(node) {
             e.stopPropagation();
             enterEditor();
         });
+    const displayGrip = displayActions.querySelector(".floyo-display-grip");
+    displayGrip.addEventListener("pointerdown", (e) => {
+        if (!node.size) return;
+        e.preventDefault();
+        e.stopPropagation();
+        displayGrip.setPointerCapture?.(e.pointerId);
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startSize = [...node.size];
+        const prevUserSelect = document.body.style.userSelect;
+        document.body.style.userSelect = "none";
+
+        const onMove = (moveEvent) => {
+            const nextW = startSize[0] + (moveEvent.clientX - startX);
+            const nextH = startSize[1] + (moveEvent.clientY - startY);
+            node.setSize([nextW, nextH]);
+            node.setDirtyCanvas(true, true);
+        };
+        const onUp = (upEvent) => {
+            displayGrip.releasePointerCapture?.(upEvent.pointerId);
+            document.body.style.userSelect = prevUserSelect;
+            window.removeEventListener("pointermove", onMove, true);
+            window.removeEventListener("pointerup", onUp, true);
+            window.removeEventListener("pointercancel", onUp, true);
+            node.setDirtyCanvas(true, true);
+        };
+
+        window.addEventListener("pointermove", onMove, true);
+        window.addEventListener("pointerup", onUp, true);
+        window.addEventListener("pointercancel", onUp, true);
+    });
 
     // ── Image + video selection / resize / delete ──
     // Click an <img> or .floyo-embed (video card) inside the editor →
@@ -1120,23 +1211,19 @@ function setupStickyNote(node) {
         return null;
     }
     editor.addEventListener("click", (e) => {
-        // ── Play button inside a video card → swap thumbnail for iframe ──
-        const playBtn = e.target.closest(".floyo-embed-play");
-        if (playBtn && editor.contains(playBtn)) {
+        // ── Open button inside a selected video card → source URL in new tab ──
+        const openBtn = e.target.closest(".floyo-embed-open, .floyo-embed-play");
+        if (openBtn && editor.contains(openBtn)) {
             e.preventDefault();
             e.stopPropagation();
-            const embed = playBtn.closest(".floyo-embed");
-            const id = embed?.dataset.videoId;
-            const platform = embed?.dataset.platform;
-            if (!embed || !id) return;
-            const src = platform === "youtube"
-                ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`
-                : `https://player.vimeo.com/video/${id}?autoplay=1`;
-            // Replace the whole card with just the iframe (keeps the
-            // outer .floyo-embed wrapper so the 16:9 aspect-ratio +
-            // selection behaviour all still work).
-            embed.innerHTML = `<iframe src="${src}" frameborder="0" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"></iframe>`;
-            syncContent();
+            const embed = openBtn.closest(".floyo-embed");
+            if (!embed) return;
+            if (selectedMedia !== embed) {
+                selectMedia(embed);
+                return;
+            }
+            const url = videoEmbedUrl(embed);
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
             return;
         }
 
@@ -1183,16 +1270,6 @@ function setupStickyNote(node) {
             requestAnimationFrame(() => {
                 restoreNodeSize();
                 positionMediaTools(selectedMedia);
-                const afterRect = selectedMedia.getBoundingClientRect();
-                console.log("%c[Floyo resize]", "color:#FBBF24;font-weight:700", {
-                    tag, act,
-                    before:  { w: Math.round(beforeRect.width),  h: Math.round(beforeRect.height) },
-                    setWidth: newW,
-                    after:   { w: Math.round(afterRect.width),   h: Math.round(afterRect.height) },
-                    bodyClientW: body.clientWidth,
-                    nodeSizeLocked: lockedSize ? lockedSize[1] : null,
-                    nodeSizeAfter:  node.size ? node.size[1] : null,
-                });
             });
             // One more snap-back on the NEXT frame in case ComfyUI
             // re-runs its own layout after ours.
@@ -1286,23 +1363,11 @@ function setupStickyNote(node) {
         ctx.restore();
 
         // ── 1. Custom collapse/expand chevron in the title bar ──
-        // The Figma K-Sampler reference uses a chunky pixel-art chevron
-        // that visually matches the ArcadePixelNeue title text. Drawing
-        // a smooth ctx.fill() triangle gave anti-aliased edges that
-        // looked out of place; instead we render the chevron as a font
-        // glyph in ArcadePixelNeue itself so it inherits the same
-        // pixel-art rendering as the title.
-        //   "v"  when expanded  (points at the open body below)
-        //   ">"  when collapsed (points at the hidden body to the right)
-        // The native LiteGraph chevron click region underneath still
-        // handles the toggle — we just paint a better-looking icon over.
+        // Draw the Figma-style pixel chevron as hard-edged blocks so it
+        // stays crisp and does not depend on font fallback glyph shapes.
+        // Expanded = down chevron, collapsed = right chevron.
         ctx.save();
-        ctx.font = `18px "ArcadePixelNeue", "Courier New", monospace`;
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textBaseline = "middle";
-        ctx.textAlign = "center";
-        const chevChar = node.flags?.collapsed ? ">" : "v";
-        ctx.fillText(chevChar, 14, -titleH / 2 + 1);
+        drawPixelChevron(ctx, 14, -titleH / 2, Boolean(node.flags?.collapsed));
         ctx.restore();
 
         // ── 2. Custom title text in Arcade font ──
@@ -1319,20 +1384,31 @@ function setupStickyNote(node) {
         {
             const titleText = node.properties.title || DEFAULT_TITLE;
             ctx.save();
-            ctx.font = `18px "ArcadePixelNeue", "Courier New", monospace`;
+            ctx.font = TITLE_FONT;
             ctx.fillStyle = "#FFFFFF";
             ctx.textBaseline = "middle";
             ctx.textAlign = "left";
-            // `letterSpacing` on Canvas2D is supported in Chrome 99+ /
-            // Safari 16.4+ / Firefox 110+ — well within the ComfyUI
-            // frontend's browser support window. Older browsers just
-            // ignore it gracefully, so it's a safe progressive add.
-            try { ctx.letterSpacing = "2px"; } catch (_) {}
             // Leave room for our custom chevron (~28 px from the left
             // edge of the title bar so it visually sits in the same
             // slot as LiteGraph's native handle).
-            ctx.fillText(titleText, 28, -titleH / 2 + 1);
+            ctx.beginPath();
+            ctx.rect(28, -titleH, Math.max(20, w - 34), titleH);
+            ctx.clip();
+            drawTrackedText(ctx, titleText, 28, -titleH / 2 + 1, TITLE_LETTER_SPACING, Math.max(20, w - 34));
             ctx.restore();
+        }
+
+        // Collapsed/minimized state should look like the Figma single
+        // title bar, not a tall empty node. LiteGraph keeps node.size,
+        // so we must avoid drawing our full body outline here.
+        if (node.flags?.collapsed) {
+            ctx.save();
+            ctx.strokeStyle = t.border;
+            ctx.lineWidth = 2;
+            drawRoundedRectPath(ctx, 1, -titleH + 1, w - 2, titleH - 2, 8);
+            ctx.stroke();
+            ctx.restore();
+            return;
         }
 
         // ── 2b. Themed outline around the whole node (Matt's feedback) ──
@@ -1347,25 +1423,9 @@ function setupStickyNote(node) {
         ctx.lineJoin = "round";
         // LiteGraph rounds corners with NODE_TITLE_HEIGHT / 2 — match
         // it so our outline doesn't square off where the chrome curves.
-        const radius = 8;
-        const x0 = 1, y0 = -titleH + 1, x1 = w - 1, y1 = h - 1;
-        ctx.beginPath();
-        ctx.moveTo(x0 + radius, y0);
-        ctx.lineTo(x1 - radius, y0);
-        ctx.quadraticCurveTo(x1, y0, x1, y0 + radius);
-        ctx.lineTo(x1, y1 - radius);
-        ctx.quadraticCurveTo(x1, y1, x1 - radius, y1);
-        ctx.lineTo(x0 + radius, y1);
-        ctx.quadraticCurveTo(x0, y1, x0, y1 - radius);
-        ctx.lineTo(x0, y0 + radius);
-        ctx.quadraticCurveTo(x0, y0, x0 + radius, y0);
-        ctx.closePath();
+        drawRoundedRectPath(ctx, 1, -titleH + 1, w - 2, h + titleH - 2, 8);
         ctx.stroke();
         ctx.restore();
-
-        // Skip drawing the notch while collapsed — the node has no body
-        // to attach it to, and a notch floating around nothing looks weird.
-        if (node.flags?.collapsed) return;
 
         // ── 3. Direction notch (Matt's feedback) ──
         // Speech-bubble-style triangle attached to the selected edge so
@@ -1384,40 +1444,62 @@ function setupStickyNote(node) {
         const overlap = 2;  // px the base sinks INTO the chrome
         ctx.save();
         // Fill with the body bg colour so the notch reads as part of
-        // the node's main mass (Ritik: "node ka jo bhi colour hoga, wo
-        // arrow ka colour"). A thin white-with-low-alpha stroke makes
-        // the silhouette legible even when the canvas behind is also
-        // dark — without it the notch can blend into a dark workspace
-        // and look invisible.
+        // the node's main mass. Stroke only the OUTER two edges with
+        // the same outline colour as the node; do not stroke the base,
+        // otherwise a visible joint line appears where the notch meets
+        // the node body.
         ctx.fillStyle   = t.bg;
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = t.border;
+        ctx.lineWidth = 2;
         ctx.lineJoin = "round";
         ctx.beginPath();
+        let notchStroke = null;
         if (dir === "up") {
             const cx = w / 2;
-            ctx.moveTo(cx - base / 2, -titleH + overlap);
-            ctx.lineTo(cx + base / 2, -titleH + overlap);
-            ctx.lineTo(cx,            -titleH - reach);
+            const left = [cx - base / 2, -titleH + overlap];
+            const right = [cx + base / 2, -titleH + overlap];
+            const tip = [cx, -titleH - reach];
+            ctx.moveTo(left[0], left[1]);
+            ctx.lineTo(right[0], right[1]);
+            ctx.lineTo(tip[0], tip[1]);
+            notchStroke = [left, tip, right];
         } else if (dir === "down") {
             const cx = w / 2;
-            ctx.moveTo(cx - base / 2, h - overlap);
-            ctx.lineTo(cx + base / 2, h - overlap);
-            ctx.lineTo(cx,            h + reach);
+            const left = [cx - base / 2, h - overlap];
+            const right = [cx + base / 2, h - overlap];
+            const tip = [cx, h + reach];
+            ctx.moveTo(left[0], left[1]);
+            ctx.lineTo(right[0], right[1]);
+            ctx.lineTo(tip[0], tip[1]);
+            notchStroke = [left, tip, right];
         } else if (dir === "left") {
             // Vertical center includes the title-bar zone visually.
             const cy = (h - titleH) / 2;
-            ctx.moveTo(overlap,  cy - base / 2);
-            ctx.lineTo(overlap,  cy + base / 2);
-            ctx.lineTo(-reach,   cy);
+            const top = [overlap, cy - base / 2];
+            const bottom = [overlap, cy + base / 2];
+            const tip = [-reach, cy];
+            ctx.moveTo(top[0], top[1]);
+            ctx.lineTo(bottom[0], bottom[1]);
+            ctx.lineTo(tip[0], tip[1]);
+            notchStroke = [top, tip, bottom];
         } else { // right
             const cy = (h - titleH) / 2;
-            ctx.moveTo(w - overlap, cy - base / 2);
-            ctx.lineTo(w - overlap, cy + base / 2);
-            ctx.lineTo(w + reach,   cy);
+            const top = [w - overlap, cy - base / 2];
+            const bottom = [w - overlap, cy + base / 2];
+            const tip = [w + reach, cy];
+            ctx.moveTo(top[0], top[1]);
+            ctx.lineTo(bottom[0], bottom[1]);
+            ctx.lineTo(tip[0], tip[1]);
+            notchStroke = [top, tip, bottom];
         }
         ctx.closePath();
         ctx.fill();
+        if (notchStroke) {
+            ctx.beginPath();
+            ctx.moveTo(notchStroke[0][0], notchStroke[0][1]);
+            ctx.lineTo(notchStroke[1][0], notchStroke[1][1]);
+            ctx.lineTo(notchStroke[2][0], notchStroke[2][1]);
+        }
         ctx.stroke();
         ctx.restore();
     };
@@ -1510,7 +1592,7 @@ function setupStickyNote(node) {
             a.classList.toggle("is-active", a.dataset.dir === node.properties.pointerDir)
         );
     }
-    wireFooter(footer, wrapper, node, {
+    wireFooter(footer, {
         onTheme: (t) => {
             node.properties.theme = t;
             wrapper.dataset.theme = t;
@@ -1519,11 +1601,6 @@ function setupStickyNote(node) {
             );
             // Update the LiteGraph chrome colors too — chrome IS the header.
             applyChromeTheme();
-        },
-        onFont: (f) => {
-            node.properties.font = f;
-            wrapper.dataset.font = f;
-            node.setDirtyCanvas(true, true);
         },
         onSave: exitEditor,
         onPointerDir: (dir) => {
@@ -1538,11 +1615,6 @@ function setupStickyNote(node) {
             node.setDirtyCanvas(true, true);
             try { app?.graph?.setDirtyCanvas?.(true, true); } catch (_) {}
             try { app?.canvas?.draw?.(true, true); } catch (_) {}
-            console.log(
-                "[Floyo Sticky Note] pointerDir =",
-                node.properties.pointerDir,
-                "  node.size =", node.size && [...node.size]
-            );
         },
     });
     applyPointerActive();
@@ -1550,8 +1622,6 @@ function setupStickyNote(node) {
     footer.querySelectorAll(".floyo-swatch").forEach((s) =>
         s.classList.toggle("is-active", s.dataset.theme === node.properties.theme)
     );
-    footer.querySelector(".floyo-footer-font").value = node.properties.font;
-
     // ── Click-outside-to-save ──
     const outsideHandler = (e) => {
         if (wrapper.dataset.mode !== "editor") return;
@@ -1583,30 +1653,6 @@ function setupStickyNote(node) {
     const MIN_W = 180, MIN_H = 60;
     const MAX_W = 1600, MAX_H = 1200;
 
-    // ── Debug: trace every node.size change so we can see WHO is
-    // growing the node and from where. Poll every 200 ms; on every
-    // change, dump the old/new values + a stack to identify the
-    // caller.
-    let lastSize = node.size ? [...node.size] : [0, 0];
-    const sizeMon = setInterval(() => {
-        if (!node.size) return;
-        if (node.size[0] !== lastSize[0] || node.size[1] !== lastSize[1]) {
-            console.log(
-                "%c[Floyo size]",
-                "color:#FBBF24;font-weight:700",
-                "was", [...lastSize],
-                "→ now", [...node.size],
-                "  (delta", [node.size[0] - lastSize[0], node.size[1] - lastSize[1]], ")"
-            );
-            lastSize = [...node.size];
-        }
-    }, 200);
-    // Clean up on removal so we don't leak.
-    const _origRemovedSize = node.onRemoved;
-    node.onRemoved = function () {
-        clearInterval(sizeMon);
-        return _origRemovedSize?.apply(this, arguments);
-    };
     function clampSize() {
         if (!node.size) return false;
         let changed = false;
@@ -1617,7 +1663,7 @@ function setupStickyNote(node) {
         return changed;
     }
     if (!node.size || (node.size[0] < MIN_W || node.size[1] < MIN_H)) {
-        node.setSize([480, 480]);
+        node.setSize([246, 320]);
     } else {
         clampSize();
     }
@@ -1671,12 +1717,12 @@ function setupStickyNote(node) {
         Object.assign(node.properties, s);
         wrapper.dataset.theme = s.theme || DEFAULT_THEME;
         wrapper.dataset.font  = s.font  || "Default";
-        // node.title stays "" — we draw our own with Arcade font from properties.title.
-        node.title = "";
+        // Keep LiteGraph's native label non-empty so it cannot fall back
+        // to the Python class name; our canvas draw covers the sentinel.
+        node.title = NATIVE_TITLE_SENTINEL;
+        node.getTitle = function () { return NATIVE_TITLE_SENTINEL; };
         editor.innerHTML  = s.content || "";
         display.innerHTML = s.content || "";
-        const fontSel = footer.querySelector(".floyo-footer-font");
-        if (fontSel) fontSel.value = s.font || "Default";
         footer.querySelectorAll(".floyo-swatch").forEach((sw) =>
             sw.classList.toggle("is-active", sw.dataset.theme === node.properties.theme)
         );
@@ -1762,6 +1808,22 @@ function createToolbar() {
 }
 
 function wireToolbar(toolbar, editor, onChange) {
+    function currentBlockTag() {
+        try {
+            return String(document.queryCommandValue("formatBlock") || "").replace(/[<>]/g, "").toLowerCase();
+        } catch {
+            return "";
+        }
+    }
+
+    function commandIsActive(cmd, arg) {
+        try {
+            if (cmd === "formatBlock" && arg) return currentBlockTag() === arg.toLowerCase();
+            if (cmd && cmd !== "removeFormat") return document.queryCommandState(cmd);
+        } catch { /* queryCommandState can throw on some browsers */ }
+        return false;
+    }
+
     toolbar.querySelectorAll(".floyo-tool-btn").forEach((btn) => {
         // Don't steal focus from the editor when toolbar is clicked.
         btn.addEventListener("mousedown", (e) => e.preventDefault());
@@ -1830,8 +1892,15 @@ function wireToolbar(toolbar, editor, onChange) {
             }
 
             // ── Standard execCommand path ──
+            // Make every formatting button behave as a toggle:
+            // H1/H2/H3/PRE click again -> paragraph, lists/inline styles
+            // click again -> browser's native execCommand toggles them off.
             try {
-                document.execCommand(cmd, false, arg);
+                if (cmd === "formatBlock" && arg && commandIsActive(cmd, arg)) {
+                    document.execCommand("formatBlock", false, "P");
+                } else {
+                    document.execCommand(cmd, false, arg);
+                }
             } catch (err) {
                 console.warn("[Floyo Sticky Note] execCommand failed:", cmd, err);
             }
@@ -1852,7 +1921,7 @@ function createFooter() {
     logo.draggable = false;
     footer.appendChild(logo);
 
-    // ── Center cluster: swatches + font dropdown ──
+    // ── Center cluster: theme swatches ──
     const center = document.createElement("div");
     center.className = "floyo-footer-center";
 
@@ -1868,17 +1937,6 @@ function createFooter() {
     });
     center.appendChild(swatches);
 
-    const fontSel = document.createElement("select");
-    fontSel.className = "floyo-footer-font";
-    fontSel.title = "Font";
-    FONT_OPTIONS.forEach((f) => {
-        const opt = document.createElement("option");
-        opt.value = f;
-        opt.textContent = f;
-        fontSel.appendChild(opt);
-    });
-    center.appendChild(fontSel);
-
     footer.appendChild(center);
 
     // ── Pointer-direction compass — Matt's Figma 970-485 design ──
@@ -1891,19 +1949,18 @@ function createFooter() {
     const pointer = document.createElement("div");
     pointer.className = "floyo-footer-pointer";
     pointer.title = "Pick a side for the node to point from";
-    // Up / Down / Left / Right wedges, anchored around the center of
-    // the 26×18 viewBox. Path data lifted from Matt's Figma SVG and
-    // tagged with data-dir so the existing click delegation still
-    // finds them.
-    pointer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 18" width="32" height="22" fill="none" aria-hidden="true" class="floyo-pointer-svg">
+    // Up / Down / Left / Right wedges in a roomier viewBox. Left/right
+    // are intentionally redrawn as full-size triangles so they don't look
+    // smaller than the top/bottom wedges when rasterized in the compact footer.
+    pointer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 22" width="30" height="22" fill="none" aria-hidden="true" class="floyo-pointer-svg">
         <path class="floyo-pointer-arrow" data-dir="up"
-              d="M11.7655 1.49994C12.1504 0.833273 13.1126 0.833272 13.4975 1.49994L15.5942 5.13152C15.9791 5.79818 15.498 6.63152 14.7282 6.63152H10.5348C9.76501 6.63152 9.28388 5.79818 9.66878 5.13152L11.7655 1.49994Z"/>
+              d="M14.134 1.5C14.519 0.833 15.481 0.833 15.866 1.5L18.25 5.63C18.635 6.297 18.154 7.13 17.384 7.13H12.616C11.846 7.13 11.365 6.297 11.75 5.63L14.134 1.5Z"/>
         <path class="floyo-pointer-arrow" data-dir="down"
-              d="M13.4977 15.5527C13.1128 16.2194 12.1506 16.2194 11.7657 15.5527L9.66897 11.9211C9.28407 11.2545 9.7652 10.4211 10.535 10.4211L14.7284 10.4211C15.4982 10.4211 15.9793 11.2545 15.5944 11.9211L13.4977 15.5527Z"/>
+              d="M15.866 20.5C15.481 21.167 14.519 21.167 14.134 20.5L11.75 16.37C11.365 15.703 11.846 14.87 12.616 14.87H17.384C18.154 14.87 18.635 15.703 18.25 16.37L15.866 20.5Z"/>
         <path class="floyo-pointer-arrow" data-dir="left"
-              d="M1.75 8.95905C1.43765 8.77862 1.41815 8.34503 1.69141 8.13287L1.75 8.09283L5.38184 5.99616C5.71511 5.8041 6.13184 6.04499 6.13184 6.42975L6.13184 10.6231C6.13173 11.0079 5.71511 11.2481 5.38184 11.0557L1.75 8.95905Z"/>
+              d="M1.5 11.866C0.833 11.481 0.833 10.519 1.5 10.134L5.63 7.75C6.297 7.365 7.13 7.846 7.13 8.616V13.384C7.13 14.154 6.297 14.635 5.63 14.25L1.5 11.866Z"/>
         <path class="floyo-pointer-arrow" data-dir="right"
-              d="M23.5132 8.09351C23.8255 8.27393 23.845 8.70753 23.5718 8.91968L23.5132 8.95972L19.8813 11.0564C19.5481 11.2485 19.1313 11.0076 19.1313 10.6228L19.1313 6.42944C19.1314 6.04466 19.5481 5.80449 19.8813 5.99683L23.5132 8.09351Z"/>
+              d="M28.5 10.134C29.167 10.519 29.167 11.481 28.5 11.866L24.37 14.25C23.703 14.635 22.87 14.154 22.87 13.384V8.616C22.87 7.846 23.703 7.365 24.37 7.75L28.5 10.134Z"/>
     </svg>`;
     footer.appendChild(pointer);
 
@@ -1921,7 +1978,7 @@ function createFooter() {
     return footer;
 }
 
-function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave, onPointerDir }) {
+function wireFooter(footer, { onTheme, onSave, onPointerDir }) {
     // Pointer-direction arrows (4-way compass in the footer).
     // Listen on the OUTER `.floyo-footer-pointer` container with event
     // delegation — clicks anywhere inside (SVG, path, padding) bubble up
@@ -1943,7 +2000,6 @@ function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave, onPointerD
             if (!arrow) return;
             const dir = arrow.dataset.dir;
             if (!dir) return;
-            console.log("[Floyo Sticky Note] pointer click:", dir);
             onPointerDir?.(dir);
         });
     }
@@ -1965,12 +2021,6 @@ function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave, onPointerD
             onTheme(sw.dataset.theme);
         });
     });
-    const fontSel = footer.querySelector(".floyo-footer-font");
-    fontSel.addEventListener("mousedown", (e) => e.stopPropagation());
-    fontSel.addEventListener("change", (e) => {
-        e.stopPropagation();
-        onFont(fontSel.value);
-    });
     const save = footer.querySelector(".floyo-footer-save");
     save.addEventListener("mousedown", (e) => e.preventDefault());
     save.addEventListener("click", (e) => {
@@ -1981,6 +2031,54 @@ function wireFooter(footer, wrapper, node, { onTheme, onFont, onSave, onPointerD
 }
 
 /* ─── Tiny helpers ────────────────────────────────────────────────────── */
+
+function drawTrackedText(ctx, text, x, y, spacing, maxWidth = Infinity) {
+    let cursor = x;
+    for (const ch of Array.from(text)) {
+        const w = ctx.measureText(ch).width;
+        if (cursor + w > x + maxWidth) break;
+        ctx.fillText(ch, cursor, y);
+        cursor += w + spacing;
+    }
+}
+
+function drawPixelChevron(ctx, cx, cy, collapsed) {
+    const scale = 1.25;
+    const blocks = [
+        [6.4165, 8.75, 1.1667, 1.1667],
+        [5.2498, 7.5833, 1.1667, 1.1667],
+        [7.5832, 7.5833, 1.1667, 1.1667],
+        [4.0832, 6.4167, 1.1667, 1.1667],
+        [8.7498, 6.4167, 1.1667, 1.1667],
+        [2.9165, 5.25, 1.1667, 1.1667],
+        [9.9165, 5.25, 1.1667, 1.1667],
+    ];
+    ctx.translate(cx, cy);
+    if (collapsed) ctx.rotate(-Math.PI / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-7, -7);
+    ctx.fillStyle = CHEVRON_COLOR;
+    for (const [x, y, w, h] of blocks) {
+        ctx.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.floor(w)), Math.max(1, Math.floor(h)));
+    }
+}
+
+function drawRoundedRectPath(ctx, x, y, w, h, radius) {
+    const r = Math.min(radius, w / 2, h / 2);
+    const x1 = x + w;
+    const y1 = y + h;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x1 - r, y);
+    ctx.quadraticCurveTo(x1, y, x1, y + r);
+    ctx.lineTo(x1, y1 - r);
+    ctx.quadraticCurveTo(x1, y1, x1 - r, y1);
+    ctx.lineTo(x + r, y1);
+    ctx.quadraticCurveTo(x, y1, x, y1 - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
 
 function placeCaretAtEnd(el) {
     el.focus();
@@ -2116,27 +2214,25 @@ function insertMediaWithTrailingParagraph(editor, mediaHtml) {
 }
 
 /**
- * Recognise a YouTube or Vimeo URL and return a "preview card" embed —
- * thumbnail + play overlay. The actual iframe loads only when the user
- * clicks ▶, which:
- *   • avoids YouTube's "Video unavailable" / referrer policy errors that
- *     hit on first load from localhost,
- *   • keeps the workflow snappy (no iframes loading until requested),
- *   • mirrors the Notion / Slack / Medium embed UX.
+ * Recognise a YouTube or Vimeo URL and return a "preview card" embed.
+ * We store the original URL and open it in a new browser tab instead of
+ * loading an iframe inside the note; this keeps sticky notes lightweight
+ * and leaves editor clicks free for resize/delete selection.
  * Returns `null` if the URL doesn't match a known pattern.
  */
 function videoUrlToEmbed(url) {
     if (!url) return null;
     url = url.trim();
-    const playSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
+    const originalUrl = escapeAttr(url);
+    const openSvg = `<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>`;
     // YouTube — youtu.be/<id>, youtube.com/watch?v=<id>, embed/<id>, shorts/<id>
     let m = url.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
     if (m) {
         const id = escapeAttr(m[1]);
         // hqdefault is the most reliable size that exists for every video.
-        return `<div class="floyo-embed floyo-embed-youtube" data-platform="youtube" data-video-id="${id}" contenteditable="false">
+        return `<div class="floyo-embed floyo-embed-youtube" data-platform="youtube" data-video-id="${id}" data-url="${originalUrl}" contenteditable="false">
             <img class="floyo-embed-thumb" src="https://img.youtube.com/vi/${id}/hqdefault.jpg" alt="YouTube video" onerror="this.style.display='none'" />
-            <button type="button" class="floyo-embed-play" data-act="play" aria-label="Play video">${playSvg}</button>
+            <button type="button" class="floyo-embed-open" data-act="open" aria-label="Open video in new tab">${openSvg}</button>
             <div class="floyo-embed-brand">YouTube</div>
         </div>`;
     }
@@ -2146,13 +2242,24 @@ function videoUrlToEmbed(url) {
         const id = escapeAttr(m[1]);
         // vumbnail.com is a free Vimeo-thumbnail proxy; if it fails the
         // onerror hides the broken img and the dark backdrop remains.
-        return `<div class="floyo-embed floyo-embed-vimeo" data-platform="vimeo" data-video-id="${id}" contenteditable="false">
+        return `<div class="floyo-embed floyo-embed-vimeo" data-platform="vimeo" data-video-id="${id}" data-url="${originalUrl}" contenteditable="false">
             <img class="floyo-embed-thumb" src="https://vumbnail.com/${id}.jpg" alt="Vimeo video" onerror="this.style.display='none'" />
-            <button type="button" class="floyo-embed-play" data-act="play" aria-label="Play video">${playSvg}</button>
+            <button type="button" class="floyo-embed-open" data-act="open" aria-label="Open video in new tab">${openSvg}</button>
             <div class="floyo-embed-brand">Vimeo</div>
         </div>`;
     }
     return null;
+}
+
+function videoEmbedUrl(embed) {
+    if (!embed) return "";
+    const stored = embed.dataset.url;
+    if (stored) return stored;
+    const id = embed.dataset.videoId;
+    if (!id) return "";
+    if (embed.dataset.platform === "youtube") return `https://www.youtube.com/watch?v=${id}`;
+    if (embed.dataset.platform === "vimeo") return `https://vimeo.com/${id}`;
+    return "";
 }
 
 /**

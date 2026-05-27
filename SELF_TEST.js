@@ -13,6 +13,8 @@
  *   7. Toggle each of the 4 pointer-arrow directions.
  *   8. Rename the title.
  *   9. Save (exit editor mode) and verify display HTML carries everything.
+ *   10. Fill the note with long content and verify it scrolls instead of
+ *       auto-growing or blocking manual shrink.
  *
  * Each step prints ✓ or ✗ to the console. The final summary prints PASS
  * counts so you can tell at a glance whether anything regressed.
@@ -48,12 +50,13 @@
         if (!wrap) return fail("wrapper element not found in DOM");
         pass(`node created (id ${node.id}) and wrapper attached`);
 
+        const body    = wrap.querySelector(".floyo-sticky-body");
         const editor  = wrap.querySelector(".floyo-sticky-editor");
         const display = wrap.querySelector(".floyo-sticky-display");
         const toolbar = wrap.querySelector(".floyo-sticky-toolbar");
         const footer  = wrap.querySelector(".floyo-sticky-footer");
         const saveBtn = footer?.querySelector(".floyo-footer-save");
-        if (!editor || !display || !toolbar || !footer || !saveBtn)
+        if (!body || !editor || !display || !toolbar || !footer || !saveBtn)
             return fail("required child elements missing");
         pass("editor + display + toolbar + footer + save all present in DOM");
 
@@ -119,10 +122,10 @@
         log("Step 8 — pointer arrows");
         for (const dir of ["up", "down", "left", "right"]) {
             const arrow = footer.querySelector(`.floyo-pointer-arrow[data-dir="${dir}"]`);
-            arrow?.click();
+            arrow?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
             await sleep(30);
             node.properties.pointerDir === dir ? pass(`pointerDir=${dir}`) : fail(`pointerDir not set to ${dir}`);
-            arrow?.click(); // toggle off
+            arrow?.dispatchEvent(new MouseEvent("click", { bubbles: true })); // toggle off
         }
         node.properties.pointerDir === null ? pass("pointer cleared after toggle-off") : fail("pointer didn't clear");
 
@@ -138,13 +141,7 @@
         wrap.dataset.mode === "display" ? pass("mode=display after save") : fail("mode didn't switch back");
         display.innerHTML === editor.innerHTML ? pass("display matches editor (syncContent)") : fail("display + editor diverged");
 
-        log("Step 11 — node didn't auto-grow");
-        const initialH = node.size?.[1];
-        await sleep(120);
-        const laterH = node.size?.[1];
-        Math.abs(laterH - initialH) < 5 ? pass(`node height stable (${initialH} → ${laterH})`) : fail(`node grew ${initialH} → ${laterH}`);
-
-        log("Step 12 — serialise + deserialise round-trip");
+        log("Step 11 — serialise + deserialise round-trip");
         const data = node.serialize();
         const fresh = LiteGraph.createNode("FloyoStickyNote");
         app.graph.add(fresh);
@@ -153,6 +150,29 @@
         fresh.properties.title === "Self-Test Note" ? pass("title round-tripped") : fail("title lost on configure", JSON.stringify(fresh.properties));
         fresh.properties.content?.includes("youtube") ? pass("YouTube embed round-tripped") : fail("YouTube lost on configure");
         fresh.properties.content?.includes("data:image") ? pass("base64 image round-tripped") : fail("base64 lost on configure");
+
+        log("Step 12 — long content scrolls without auto-grow");
+        display.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+        await sleep(80);
+        const longHtml = Array.from({ length: 36 }, (_, i) =>
+            `<p><b>Long content line ${i + 1}</b> — this should stay inside the sticky body and be readable by scrolling.</p>`
+        ).join("");
+        const targetSize = [360, 180];
+        node.setSize(targetSize);
+        editor.innerHTML = longHtml;
+        editor.dispatchEvent(new InputEvent("input", { bubbles: true }));
+        await sleep(80);
+        const initialH = node.size?.[1];
+        saveBtn.click();
+        await sleep(120);
+        const laterH = node.size?.[1];
+        Math.abs(laterH - initialH) < 5 ? pass(`node height stable (${initialH} → ${laterH})`) : fail(`node grew ${initialH} → ${laterH}`);
+        body.scrollHeight > body.clientHeight + 10
+            ? pass(`body scrolls internally (${body.clientHeight}px viewport / ${body.scrollHeight}px content)`)
+            : fail("body did not become scrollable", `${body.clientHeight}px viewport / ${body.scrollHeight}px content`);
+        node.setSize([260, 120]);
+        await sleep(120);
+        node.size[1] <= 125 ? pass(`manual shrink works with content (${node.size[1]}px)`) : fail("manual shrink blocked by content", node.size);
 
     } catch (e) {
         console.error("[Floyo test] threw:", e);
