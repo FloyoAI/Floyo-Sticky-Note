@@ -343,36 +343,46 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
 
+/* Edit button — pixel-art pencil on a black "box" background, per
+   Matt's Figma 930-4896. Square card, slight rounding, black fill so
+   the pencil reads on every theme colour. */
 .floyo-display-edit {
-    width: 28px;
-    height: 24px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    width: 26px;
+    height: 26px;
+    background: #000;
+    border: none;
     border-radius: 6px;
-    color: var(--text);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     pointer-events: all;
-    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+    padding: 0;
+    transition: transform 120ms ease, box-shadow 120ms ease;
 }
 .floyo-display-edit:hover {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.32);
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35);
     transform: scale(1.05);
 }
 .floyo-display-edit:active { transform: scale(0.96); }
+/* The pencil SVG is rendered with fill=white inline so it shows up on
+   the black background regardless of theme. */
+.floyo-display-edit svg { display: block; }
 
+/* Resize-grip — three white diagonal lines at the bottom-right corner,
+   exactly the SVG Matt provided. 18×18 box, 0.3 opacity, white stroke,
+   round caps. Purely decorative — drag handle is LiteGraph's native
+   resize handle in the same corner. */
 .floyo-display-grip {
-    color: rgba(255, 255, 255, 0.35);
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    opacity: 0.3;
 }
+.floyo-display-grip svg { display: block; }
 
 /* Rich-text styles inside body */
 .floyo-sticky-body h1 {
@@ -948,18 +958,22 @@ function setupStickyNote(node) {
     // Both are hidden once the user enters editor mode.
     const displayActions = document.createElement("div");
     displayActions.className = "floyo-display-actions";
+    // Edit pencil + resize-grip use the EXACT SVGs Matt put in the
+    // Figma 930-4896 spec — pixel-art pencil (12×12 black-fill) and the
+    // three diagonal lines (18×18 white-stroke at 0.3 opacity). The
+    // pencil's `fill="#fff"` overrides the original black so it reads on
+    // the new black button background.
     displayActions.innerHTML = `
         <button type="button" class="floyo-display-edit" title="Edit">
-            <svg viewBox="0 0 18 18" width="14" height="14" fill="none"
-                 stroke="currentColor" stroke-width="1.6"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M2 14 L2 16 L4 16 L13 7 L11 5 Z"/>
-                <path d="M11 5 L13 3 L15 5 L13 7"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
             </svg>
         </button>
         <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
-            <svg viewBox="0 0 18 18" width="12" height="12" fill="currentColor" aria-hidden="true">
-                <circle cx="14" cy="14" r="1"/><circle cx="14" cy="10" r="1"/><circle cx="10" cy="14" r="1"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 19 19" fill="none" aria-hidden="true">
+                <line x1="18" y1="6.70711" x2="6.70711" y2="18" stroke="white" stroke-linecap="round"/>
+                <line x1="18" y1="12.7071" x2="12.7071" y2="18" stroke="white" stroke-linecap="round"/>
+                <line x1="18" y1="0.707107" x2="0.707107" y2="18" stroke="white" stroke-linecap="round"/>
             </svg>
         </div>
     `;
