@@ -75,6 +75,8 @@ async function loadArcadeFont() {
     } catch {}
 }
 loadArcadeFont();
+setTimeout(loadArcadeFont, 250);
+setTimeout(loadArcadeFont, 1000);
 
 /* ─── Themes ──────────────────────────────────────────────────────────── */
 
@@ -899,12 +901,25 @@ const STYLES = `
 `;
 
 function injectStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
+    let style = document.getElementById(STYLE_ID);
+    if (!style) {
+        style = document.createElement("style");
+        style.id = STYLE_ID;
+        document.head.appendChild(style);
+    }
     style.textContent = STYLES.replaceAll("%%ARCADE_OTF%%", ARCADE_OTF());
-    document.head.appendChild(style);
+    if (!style.isConnected) document.head.appendChild(style);
     loadArcadeFont();
+    setTimeout(() => {
+        const s = document.getElementById(STYLE_ID);
+        if (s) s.textContent = STYLES.replaceAll("%%ARCADE_OTF%%", ARCADE_OTF());
+        loadArcadeFont();
+    }, 250);
+    setTimeout(() => {
+        const s = document.getElementById(STYLE_ID);
+        if (s) s.textContent = STYLES.replaceAll("%%ARCADE_OTF%%", ARCADE_OTF());
+        loadArcadeFont();
+    }, 1000);
 }
 
 /* ─── Extension registration ──────────────────────────────────────────── */
