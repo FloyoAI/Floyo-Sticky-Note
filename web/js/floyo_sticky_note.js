@@ -26,7 +26,7 @@ function resolveAssetsUrl() {
     try {
         const source = new URL(import.meta.url);
         const extMatch = source.pathname.match(/\/extensions\/([^/]+)\//);
-        const apiBase = app?.api?.api_base;
+        const apiBase = globalThis.app?.api?.api_base || app?.api?.api_base;
         if (source.hostname.startsWith("dispatch.") && extMatch && apiBase) {
             return new URL(`${apiBase}/extensions/${extMatch[1]}/assets/`, window.location.origin).href;
         }
