@@ -27,7 +27,7 @@ function resolveAssetsUrl() {
         const source = new URL(import.meta.url);
         const extMatch = source.pathname.match(/\/extensions\/([^/]+)\//);
         const apiBase = globalThis.app?.api?.api_base || app?.api?.api_base;
-        if (source.hostname.startsWith("dispatch.") && extMatch && apiBase) {
+        if (extMatch && apiBase && String(apiBase).includes("/api/comfyui-proxy/")) {
             return new URL(`${apiBase}/extensions/${extMatch[1]}/assets/`, window.location.origin).href;
         }
         const proxyResource = performance.getEntriesByType("resource")
