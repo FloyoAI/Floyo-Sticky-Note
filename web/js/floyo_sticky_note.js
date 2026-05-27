@@ -40,10 +40,10 @@ function resolveAssetsUrl() {
     } catch {}
     return direct;
 }
-const ASSETS_URL = resolveAssetsUrl();
-const FLOYO_LOGO = `${ASSETS_URL}floyo-logo.png`;
-const YO_LOGO    = `${ASSETS_URL}yo-circle.png`;
-const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
+const assetUrl = (name) => `${resolveAssetsUrl()}${name}`;
+const FLOYO_LOGO = () => assetUrl("floyo-logo.png");
+const YO_LOGO    = () => assetUrl("yo-circle.png");
+const ARCADE_OTF = () => assetUrl("ArcadePixelNeue.otf");
 
 // Preload the Arcade font so the title text renders with it without a
 // flash of the system fallback. The CSS @font-face below is the canonical
@@ -57,9 +57,10 @@ const ARCADE_OTF = `${ASSETS_URL}ArcadePixelNeue.otf`;
 // canvas redraws over the next ~1 s to repaint any nodes that came in
 // while the font was still loading.
 let __floyoFontReady = false;
-(async function loadArcadeFont() {
+async function loadArcadeFont() {
+    if (__floyoFontReady) return;
     try {
-        const face = new FontFace("ArcadePixelNeue", `url("${ARCADE_OTF}")`);
+        const face = new FontFace("ArcadePixelNeue", `url("${ARCADE_OTF()}")`);
         await face.load();
         document.fonts.add(face);
         // Wait until the canvas font cache actually contains this face.
@@ -72,7 +73,8 @@ let __floyoFontReady = false;
         setTimeout(repaint, 500);
         setTimeout(repaint, 1500);
     } catch {}
-})();
+}
+loadArcadeFont();
 
 /* ─── Themes ──────────────────────────────────────────────────────────── */
 
@@ -208,7 +210,7 @@ const STYLES = `
 
 @font-face {
     font-family: 'ArcadePixelNeue';
-    src: url('${ARCADE_OTF}') format('opentype');
+    src: url('%%ARCADE_OTF%%') format('opentype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -900,8 +902,9 @@ function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement("style");
     style.id = STYLE_ID;
-    style.textContent = STYLES;
+    style.textContent = STYLES.replaceAll("%%ARCADE_OTF%%", ARCADE_OTF());
     document.head.appendChild(style);
+    loadArcadeFont();
 }
 
 /* ─── Extension registration ──────────────────────────────────────────── */
@@ -1935,7 +1938,7 @@ function createFooter() {
     // ── Floyo logo (bottom-left) — full wordmark per senior preference ──
     const logo = document.createElement("img");
     logo.className = "floyo-footer-logo";
-    logo.src = FLOYO_LOGO;
+    logo.src = FLOYO_LOGO();
     logo.alt = "Floyo";
     logo.draggable = false;
     footer.appendChild(logo);
