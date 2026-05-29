@@ -1150,6 +1150,16 @@ function setupStickyNote(node) {
     }
 
     // ── Body interactions ──
+    // ComfyUI/LiteGraph also listens for wheel events to zoom the canvas.
+    // When the pointer is over the note, keep the wheel inside the DOM
+    // widget so the sticky body scrolls like a normal document instead.
+    const stopCanvasWheelZoom = (e) => {
+        if (!wrapper.contains(e.target)) return;
+        e.stopPropagation();
+    };
+    wrapper.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });
+    body.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });
+
     // Double-click anywhere on the body — even on empty whitespace —
     // enters editor mode. The display child handler was only firing
     // when the click landed on visible content; bind on body itself
@@ -1821,6 +1831,8 @@ function setupStickyNote(node) {
     const onRemoved = node.onRemoved;
     node.onRemoved = function () {
         document.removeEventListener("mousedown", outsideHandler);
+        wrapper.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
+        body.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
         onRemoved?.apply(this, arguments);
     };
 }

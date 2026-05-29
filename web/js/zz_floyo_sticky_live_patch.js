@@ -62,6 +62,20 @@ function styleVueTitles(root = document) {
     });
 }
 
+function installWheelGuard(root = document) {
+    root.querySelectorAll(".floyo-sticky-wrapper, .floyo-sticky-body").forEach((el) => {
+        if (el.__floyoStickyWheelGuard) return;
+        const guard = (event) => {
+            // Keep wheel input inside the sticky note DOM. Otherwise the
+            // LiteGraph canvas receives the same wheel event and zooms the
+            // whole workflow instead of letting the note content scroll.
+            event.stopPropagation();
+        };
+        el.addEventListener("wheel", guard, { capture: true, passive: false });
+        el.__floyoStickyWheelGuard = guard;
+    });
+}
+
 function injectPatchStyles() {
     if (document.getElementById(PATCH_STYLE_ID)) return;
     const style = document.createElement("style");
@@ -83,6 +97,7 @@ function patchExistingNodes() {
     (app.graph?._nodes || []).forEach(syncTitle);
     styleVueTitles();
     hidePackageBadges();
+    installWheelGuard();
     app.graph?.setDirtyCanvas?.(true, true);
 }
 
@@ -95,6 +110,7 @@ function installDomObserver() {
                 if (node.nodeType !== Node.ELEMENT_NODE) return;
                 styleVueTitles(node);
                 hidePackageBadges(node);
+                installWheelGuard(node);
             });
         }
     });

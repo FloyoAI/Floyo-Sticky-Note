@@ -1,0 +1,48 @@
+/**
+ * Floyo Sticky Note wheel patch.
+ *
+ * Hosted Floyo loads extension modules from immutable dispatch URLs, so fixes
+ * that must affect already-used browsers need a fresh filename. This patch
+ * keeps wheel/trackpad input inside the sticky note DOM so the note content
+ * scrolls instead of the LiteGraph canvas zooming.
+ */
+
+import { app } from "../../../scripts/app.js";
+
+const WHEEL_PATCH_FLAG = "__floyoStickyWheelPatch";
+
+function installWheelGuard(root = document) {
+    root.querySelectorAll(".floyo-sticky-wrapper, .floyo-sticky-body").forEach((el) => {
+        if (el[WHEEL_PATCH_FLAG]) return;
+        const guard = (event) => {
+            event.stopPropagation();
+        };
+        el.addEventListener("wheel", guard, { capture: true, passive: false });
+        el[WHEEL_PATCH_FLAG] = guard;
+    });
+}
+
+function installObserver() {
+    if (window.__floyoStickyWheelPatchObserver) return;
+    const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.type !== "childList") continue;
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) installWheelGuard(node);
+            });
+        }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    window.__floyoStickyWheelPatchObserver = observer;
+}
+
+app.registerExtension({
+    name: "Floyo.StickyNote.WheelPatch",
+    async setup() {
+        installWheelGuard();
+        installObserver();
+        setTimeout(installWheelGuard, 0);
+        setTimeout(installWheelGuard, 500);
+        setTimeout(installWheelGuard, 1500);
+    },
+});
