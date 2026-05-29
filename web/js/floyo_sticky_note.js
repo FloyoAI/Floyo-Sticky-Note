@@ -1166,6 +1166,7 @@ function setupStickyNote(node) {
         e.preventDefault();
         e.stopImmediatePropagation();
     };
+    document.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });
     wrapper.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });
     body.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });
 
@@ -1840,6 +1841,7 @@ function setupStickyNote(node) {
     const onRemoved = node.onRemoved;
     node.onRemoved = function () {
         document.removeEventListener("mousedown", outsideHandler);
+        document.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
         wrapper.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
         body.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
         onRemoved?.apply(this, arguments);
