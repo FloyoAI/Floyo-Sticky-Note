@@ -1,10 +1,9 @@
 /**
- * Floyo Sticky Note wheel capture fix.
+ * Floyo Sticky Note runtime wheel fix.
  *
- * LiteGraph can receive wheel input through the canvas before element-level
- * sticky handlers get a chance to contain it. A document capture listener runs
- * earlier in the event path: if the wheel originated inside a sticky note, it
- * scrolls the note body and prevents the canvas zoom handler from seeing it.
+ * This fresh filename installs immediately on import. It is intentionally not
+ * limited to registerExtension.setup(), because hosted Floyo sessions can keep
+ * an existing app lifecycle alive while fetching new extension files.
  */
 
 import { app } from "../../../scripts/app.js";
@@ -17,8 +16,8 @@ function stickyBodyFromEvent(event) {
     return target.closest(".floyo-sticky-wrapper")?.querySelector(".floyo-sticky-body") || null;
 }
 
-function installDocumentWheelCapture() {
-    if (window.__floyoStickyWheelCaptureFix) return;
+function installRuntimeWheelFix() {
+    if (window.__floyoStickyWheelRuntimeFix) return;
 
     const guard = (event) => {
         const body = stickyBodyFromEvent(event);
@@ -34,16 +33,14 @@ function installDocumentWheelCapture() {
     };
 
     document.addEventListener("wheel", guard, { capture: true, passive: false });
-    window.__floyoStickyWheelCaptureFix = guard;
+    window.__floyoStickyWheelRuntimeFix = guard;
 }
 
+installRuntimeWheelFix();
+
 app.registerExtension({
-    name: "Floyo.StickyNote.WheelCaptureFix",
+    name: "Floyo.StickyNote.WheelRuntimeFix",
     async setup() {
-        installDocumentWheelCapture();
+        installRuntimeWheelFix();
     },
 });
-
-// Also install immediately. Floyo can import extension modules after the
-// normal app setup phase during hot/reloaded iframe sessions.
-installDocumentWheelCapture();
