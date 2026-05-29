@@ -956,10 +956,12 @@ app.registerExtension({
                 this.color    = t.header;
                 this.bgcolor  = t.bg;
                 this.boxcolor = t.border;
-                // Suppress LiteGraph's native title text. We draw our own
-                // in Arcade font inside onDrawForeground (set up later).
-                this.title = NATIVE_TITLE_SENTINEL;
-                this.getTitle = function () { return NATIVE_TITLE_SENTINEL; };
+                // Title lives in node.title so it renders in BOTH the
+                // canvas renderer (covered by our Arcade overpaint in
+                // onDrawForeground) and the Vue/DOM node renderer used on
+                // Floyo (where onDrawForeground never runs). setupStickyNote
+                // syncs it to properties.title right after.
+                this.title = (this.properties && this.properties.title) || DEFAULT_TITLE;
                 // ComfyUI v3 draws an external green package badge above
                 // custom nodes via node.drawBadges(). This note already has
                 // branded chrome, so suppress that badge for this node only.
@@ -1012,16 +1014,13 @@ function setupStickyNote(node) {
     }
     applyChromeTheme();
 
-    // Hide LiteGraph's built-in title text — we draw our own in the
-    // title-bar zone using the Arcade font (see onDrawForeground below).
-    // Setting `node.title = ""` is not enough because LiteGraph's
-    // `getTitle()` falls back to `node.constructor.title` (the registered
-    // display name) when title is falsy — that's what was producing the
-    // double-rendered title. Returning a non-empty blank sentinel
-    // short-circuits the fallback. node.properties.title remains the
-    // source of truth and is what we actually draw.
-    node.title = NATIVE_TITLE_SENTINEL;
-    node.getTitle = function () { return NATIVE_TITLE_SENTINEL; };
+    // The node title lives in `node.title` (kept in sync with
+    // properties.title). On the canvas renderer our onDrawForeground
+    // overpaints the title bar and draws the Arcade title on top; on the
+    // Vue/DOM node renderer used by Floyo (where onDrawForeground never
+    // runs) the title bar reads node.title directly — so it must hold the
+    // real title, not a blank sentinel, or it falls back to the class name.
+    node.title = node.properties.title || DEFAULT_TITLE;
     node.drawBadges = function () {};
 
     // ── DOM ──
@@ -1395,6 +1394,7 @@ function setupStickyNote(node) {
             }).then((next) => {
                 if (next == null) return;
                 node.properties.title = next.trim() || DEFAULT_TITLE;
+                node.title = node.properties.title;   // keep Vue/DOM title in sync
                 node.setDirtyCanvas(true, true);
                 node.graph?.setDirtyCanvas?.(true, true);
             });
@@ -1773,6 +1773,12 @@ function setupStickyNote(node) {
     const onSerialize = node.onSerialize;
     node.onSerialize = function (o) {
         onSerialize?.apply(this, arguments);
+        // If the user renamed via the Vue/native title bar, node.title is the
+        // freshest value — prefer it so the rename is actually persisted.
+        const liveTitle = (node.title && node.title.trim() && node.title !== NATIVE_TITLE_SENTINEL)
+            ? node.title.trim()
+            : node.properties.title;
+        node.properties.title = liveTitle || DEFAULT_TITLE;
         o.floyo_state = {
             theme:      node.properties.theme,
             font:       node.properties.font,
@@ -1797,10 +1803,11 @@ function setupStickyNote(node) {
         Object.assign(node.properties, s);
         wrapper.dataset.theme = s.theme || DEFAULT_THEME;
         wrapper.dataset.font  = s.font  || "Default";
-        // Keep LiteGraph's native label non-empty so it cannot fall back
-        // to the Python class name; our canvas draw covers the sentinel.
-        node.title = NATIVE_TITLE_SENTINEL;
-        node.getTitle = function () { return NATIVE_TITLE_SENTINEL; };
+        // Restore the saved title into node.title so it shows in both the
+        // canvas and Vue/DOM node renderers (Floyo uses Vue, where our
+        // onDrawForeground Arcade title never runs).
+        node.properties.title = s.title || node.properties.title || DEFAULT_TITLE;
+        node.title = node.properties.title;
         editor.innerHTML  = s.content || "";
         display.innerHTML = s.content || "";
         footer.querySelectorAll(".floyo-swatch").forEach((sw) =>
