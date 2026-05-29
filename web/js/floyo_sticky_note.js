@@ -252,7 +252,7 @@ const STYLES = `
     background: transparent;
     border: none;
     border-radius: 0;
-    overflow: hidden;
+    overflow: visible;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
     font-size: 8px;
@@ -327,6 +327,7 @@ const STYLES = `
 .floyo-tool-btn.tool-italic    { font-style: italic; }
 .floyo-tool-btn.tool-underline { text-decoration: underline; }
 .floyo-tool-btn.tool-strike    { text-decoration: line-through; }
+.floyo-tool-btn.tool-size { min-width: 22px; font-weight: 800; }
 .floyo-tool-sep {
     width: 1px;
     height: 14px;
@@ -446,7 +447,11 @@ const STYLES = `
     font-size: 10px; font-weight: 700; margin: 11px 0 5px;
     color: #fff; line-height: 1.5;
 }
-.floyo-sticky-body p { margin: 0 0 8px; color: rgba(255, 255, 255, 0.70); }
+.floyo-sticky-body p {
+    margin: 0 0 8px;
+    color: rgba(255, 255, 255, 0.84);
+}
+.floyo-sticky-body li { color: rgba(255, 255, 255, 0.86); }
 .floyo-sticky-body b, .floyo-sticky-body strong { font-weight: 700; color: #fff; }
 .floyo-sticky-body i, .floyo-sticky-body em { font-style: italic; }
 .floyo-sticky-body u { text-decoration: underline; text-decoration-thickness: 1.5px; }
@@ -482,6 +487,92 @@ const STYLES = `
     background: rgba(255, 255, 255, 0.22);
 }
 .floyo-sticky-body ::selection { background: var(--accent); color: #0F0820; }
+
+/* DOM fallback for the directional notch. Floyo's hosted UI can render nodes
+   with Vue/DOM where onDrawForeground never runs, so the canvas notch is not
+   available. These pseudo-elements keep the arrow visible in both renderers. */
+.floyo-sticky-wrapper::before,
+.floyo-sticky-wrapper::after {
+    content: "";
+    position: absolute;
+    display: none;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 4;
+}
+.floyo-sticky-wrapper[data-pointer-dir="up"]::before {
+    display: block;
+    left: 50%;
+    top: -22px;
+    transform: translateX(-50%);
+    border-left: 26px solid transparent;
+    border-right: 26px solid transparent;
+    border-bottom: 22px solid var(--border);
+}
+.floyo-sticky-wrapper[data-pointer-dir="up"]::after {
+    display: block;
+    left: 50%;
+    top: -18px;
+    transform: translateX(-50%);
+    border-left: 22px solid transparent;
+    border-right: 22px solid transparent;
+    border-bottom: 19px solid var(--bg);
+}
+.floyo-sticky-wrapper[data-pointer-dir="down"]::before {
+    display: block;
+    left: 50%;
+    bottom: -22px;
+    transform: translateX(-50%);
+    border-left: 26px solid transparent;
+    border-right: 26px solid transparent;
+    border-top: 22px solid var(--border);
+}
+.floyo-sticky-wrapper[data-pointer-dir="down"]::after {
+    display: block;
+    left: 50%;
+    bottom: -18px;
+    transform: translateX(-50%);
+    border-left: 22px solid transparent;
+    border-right: 22px solid transparent;
+    border-top: 19px solid var(--bg);
+}
+.floyo-sticky-wrapper[data-pointer-dir="left"]::before {
+    display: block;
+    left: -22px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 26px solid transparent;
+    border-bottom: 26px solid transparent;
+    border-right: 22px solid var(--border);
+}
+.floyo-sticky-wrapper[data-pointer-dir="left"]::after {
+    display: block;
+    left: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 22px solid transparent;
+    border-bottom: 22px solid transparent;
+    border-right: 19px solid var(--bg);
+}
+.floyo-sticky-wrapper[data-pointer-dir="right"]::before {
+    display: block;
+    right: -22px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 26px solid transparent;
+    border-bottom: 26px solid transparent;
+    border-left: 22px solid var(--border);
+}
+.floyo-sticky-wrapper[data-pointer-dir="right"]::after {
+    display: block;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 22px solid transparent;
+    border-bottom: 22px solid transparent;
+    border-left: 19px solid var(--bg);
+}
 
 /* ── Embedded media (image-by-URL + video-by-URL) ── */
 .floyo-sticky-body img {
@@ -1029,6 +1120,7 @@ function setupStickyNote(node) {
     wrapper.dataset.theme = node.properties.theme;
     wrapper.dataset.font = node.properties.font;
     wrapper.dataset.mode = "display";
+    wrapper.dataset.pointerDir = node.properties.pointerDir || "";
 
     // Toolbar (visible only in editor mode)
     const toolbar = createToolbar();
@@ -1688,6 +1780,7 @@ function setupStickyNote(node) {
 
     // ── Footer wiring (theme swatches, font, save, pointer direction) ──
     function applyPointerActive() {
+        wrapper.dataset.pointerDir = node.properties.pointerDir || "";
         footer.querySelectorAll(".floyo-pointer-arrow").forEach((a) =>
             a.classList.toggle("is-active", a.dataset.dir === node.properties.pointerDir)
         );
@@ -1858,6 +1951,9 @@ function createToolbar() {
         { cmd: "formatBlock", arg: "H2", label: "H₂",   title: "Heading 2" },
         { cmd: "formatBlock", arg: "H3", label: "H₃",   title: "Heading 3" },
         { sep: true },
+        { cmd: "decreaseTextSize", label: "A−", title: "Decrease selected text size", className: "tool-size" },
+        { cmd: "increaseTextSize", label: "A+", title: "Increase selected text size", className: "tool-size" },
+        { sep: true },
         { cmd: "bold",         label: "B",  title: "Bold",          className: "tool-bold" },
         { cmd: "italic",       label: "I",  title: "Italic",        className: "tool-italic" },
         { cmd: "underline",    label: "U",  title: "Underline",     className: "tool-underline" },
@@ -1929,6 +2025,41 @@ function createToolbar() {
 }
 
 function wireToolbar(toolbar, editor, onChange) {
+    function clampTextSize(px) {
+        return Math.max(6, Math.min(36, px));
+    }
+
+    function nearestEditableElement(node) {
+        const el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+        return el?.closest?.("span, b, strong, i, em, u, s, strike, code, h1, h2, h3, p, li, pre") || null;
+    }
+
+    function adjustSelectedTextSize(delta) {
+        const sel = window.getSelection();
+        if (!sel?.rangeCount || !editor.contains(sel.anchorNode)) return false;
+        const range = sel.getRangeAt(0);
+        const baseEl = nearestEditableElement(range.startContainer) || editor;
+        const base = parseFloat(window.getComputedStyle(baseEl).fontSize) || 8;
+        const next = `${clampTextSize(base + delta)}px`;
+
+        if (range.collapsed) {
+            const target = baseEl === editor ? editor.querySelector("p, h1, h2, h3, li, pre, code, span") : baseEl;
+            if (!target || !editor.contains(target)) return false;
+            target.style.fontSize = next;
+            return true;
+        }
+
+        const span = document.createElement("span");
+        span.style.fontSize = next;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        sel.removeAllRanges();
+        const nextRange = document.createRange();
+        nextRange.selectNodeContents(span);
+        sel.addRange(nextRange);
+        return true;
+    }
+
     function currentBlockTag() {
         try {
             return String(document.queryCommandValue("formatBlock") || "").replace(/[<>]/g, "").toLowerCase();
@@ -2041,6 +2172,12 @@ function wireToolbar(toolbar, editor, onChange) {
             if (cmd === "insertDivider") {
                 restoreSelection();
                 insertMediaWithTrailingParagraph(editor, `<hr class="floyo-divider" />`);
+                onChange();
+                return;
+            }
+            if (cmd === "increaseTextSize" || cmd === "decreaseTextSize") {
+                restoreSelection();
+                adjustSelectedTextSize(cmd === "increaseTextSize" ? 2 : -2);
                 onChange();
                 return;
             }
