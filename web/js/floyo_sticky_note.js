@@ -253,6 +253,7 @@ const STYLES = `
     border: none;
     border-radius: 0;
     overflow: visible;
+    box-shadow: inset 0 0 0 2px var(--border);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
     font-size: 8px;
@@ -375,9 +376,9 @@ const STYLES = `
    so long content scrolls behind neither affordance. */
 .floyo-display-actions {
     position: absolute;
-    left: 18px;
-    right: 0;
-    bottom: 1px;
+    left: 14px;
+    right: -1px;
+    bottom: -2px;
     z-index: 3;
     display: flex;
     align-items: center;
@@ -504,74 +505,74 @@ const STYLES = `
 .floyo-sticky-wrapper[data-pointer-dir="up"]::before {
     display: block;
     left: 50%;
-    top: -22px;
+    top: -15px;
     transform: translateX(-50%);
-    border-left: 26px solid transparent;
-    border-right: 26px solid transparent;
-    border-bottom: 22px solid var(--border);
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-bottom: 15px solid var(--border);
 }
 .floyo-sticky-wrapper[data-pointer-dir="up"]::after {
     display: block;
     left: 50%;
-    top: -18px;
+    top: -12px;
     transform: translateX(-50%);
-    border-left: 22px solid transparent;
-    border-right: 22px solid transparent;
-    border-bottom: 19px solid var(--bg);
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-bottom: 13px solid var(--bg);
 }
 .floyo-sticky-wrapper[data-pointer-dir="down"]::before {
     display: block;
     left: 50%;
-    bottom: -22px;
+    bottom: -15px;
     transform: translateX(-50%);
-    border-left: 26px solid transparent;
-    border-right: 26px solid transparent;
-    border-top: 22px solid var(--border);
+    border-left: 16px solid transparent;
+    border-right: 16px solid transparent;
+    border-top: 15px solid var(--border);
 }
 .floyo-sticky-wrapper[data-pointer-dir="down"]::after {
     display: block;
     left: 50%;
-    bottom: -18px;
+    bottom: -12px;
     transform: translateX(-50%);
-    border-left: 22px solid transparent;
-    border-right: 22px solid transparent;
-    border-top: 19px solid var(--bg);
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-top: 13px solid var(--bg);
 }
 .floyo-sticky-wrapper[data-pointer-dir="left"]::before {
     display: block;
-    left: -22px;
+    left: -15px;
     top: 50%;
     transform: translateY(-50%);
-    border-top: 26px solid transparent;
-    border-bottom: 26px solid transparent;
-    border-right: 22px solid var(--border);
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-right: 15px solid var(--border);
 }
 .floyo-sticky-wrapper[data-pointer-dir="left"]::after {
     display: block;
-    left: -18px;
+    left: -12px;
     top: 50%;
     transform: translateY(-50%);
-    border-top: 22px solid transparent;
-    border-bottom: 22px solid transparent;
-    border-right: 19px solid var(--bg);
+    border-top: 13px solid transparent;
+    border-bottom: 13px solid transparent;
+    border-right: 13px solid var(--bg);
 }
 .floyo-sticky-wrapper[data-pointer-dir="right"]::before {
     display: block;
-    right: -22px;
+    right: -15px;
     top: 50%;
     transform: translateY(-50%);
-    border-top: 26px solid transparent;
-    border-bottom: 26px solid transparent;
-    border-left: 22px solid var(--border);
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-left: 15px solid var(--border);
 }
 .floyo-sticky-wrapper[data-pointer-dir="right"]::after {
     display: block;
-    right: -18px;
+    right: -12px;
     top: 50%;
     transform: translateY(-50%);
-    border-top: 22px solid transparent;
-    border-bottom: 22px solid transparent;
-    border-left: 19px solid var(--bg);
+    border-top: 13px solid transparent;
+    border-bottom: 13px solid transparent;
+    border-left: 13px solid var(--bg);
 }
 
 /* ── Embedded media (image-by-URL + video-by-URL) ── */
@@ -787,8 +788,8 @@ const STYLES = `
      to show the look; we treat that as the visual reference and pick
      #FFFFFF4D for the active state so it works on any theme bg. */
 .floyo-footer-pointer {
-    width: 32px;
-    height: 22px;
+    width: 26px;
+    height: 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -796,7 +797,7 @@ const STYLES = `
     flex: 0 0 auto;
     pointer-events: all;
 }
-.floyo-pointer-svg { display: block; width: 30px; height: 22px; }
+.floyo-pointer-svg { display: block; width: 26px; height: 18px; overflow: visible; }
 .floyo-pointer-arrow {
     fill: transparent;
     stroke: rgba(255, 255, 255, 0.30);   /* #FFFFFF4D */
@@ -2250,18 +2251,16 @@ function createFooter() {
     const pointer = document.createElement("div");
     pointer.className = "floyo-footer-pointer";
     pointer.title = "Pick a side for the node to point from";
-    // Up / Down / Left / Right wedges in a roomier viewBox. Left/right
-    // are intentionally redrawn as full-size triangles so they don't look
-    // smaller than the top/bottom wedges when rasterized in the compact footer.
-    pointer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 22" width="30" height="22" fill="none" aria-hidden="true" class="floyo-pointer-svg">
+    // Up / Right / Down / Left wedges, matching the Figma 26×18 compass.
+    pointer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 18" width="26" height="18" fill="none" aria-hidden="true" class="floyo-pointer-svg">
         <path class="floyo-pointer-arrow" data-dir="up"
-              d="M14.134 1.5C14.519 0.833 15.481 0.833 15.866 1.5L18.25 5.63C18.635 6.297 18.154 7.13 17.384 7.13H12.616C11.846 7.13 11.365 6.297 11.75 5.63L14.134 1.5Z"/>
-        <path class="floyo-pointer-arrow" data-dir="down"
-              d="M15.866 20.5C15.481 21.167 14.519 21.167 14.134 20.5L11.75 16.37C11.365 15.703 11.846 14.87 12.616 14.87H17.384C18.154 14.87 18.635 15.703 18.25 16.37L15.866 20.5Z"/>
-        <path class="floyo-pointer-arrow" data-dir="left"
-              d="M1.5 11.866C0.833 11.481 0.833 10.519 1.5 10.134L5.63 7.75C6.297 7.365 7.13 7.846 7.13 8.616V13.384C7.13 14.154 6.297 14.635 5.63 14.25L1.5 11.866Z"/>
+              d="M11.7655 1.49994C12.1504 0.833273 13.1126 0.833272 13.4975 1.49994L15.5942 5.13152C15.9791 5.79818 15.498 6.63152 14.7282 6.63152H10.5348C9.76501 6.63152 9.28388 5.79818 9.66878 5.13152L11.7655 1.49994Z"/>
         <path class="floyo-pointer-arrow" data-dir="right"
-              d="M28.5 10.134C29.167 10.519 29.167 11.481 28.5 11.866L24.37 14.25C23.703 14.635 22.87 14.154 22.87 13.384V8.616C22.87 7.846 23.703 7.365 24.37 7.75L28.5 10.134Z"/>
+              d="M23.5132 8.09351C23.8255 8.27393 23.845 8.70753 23.5718 8.91968L23.5132 8.95972L19.8813 11.0564C19.5481 11.2485 19.1313 11.0076 19.1313 10.6228V6.42944C19.1314 6.04466 19.5481 5.80449 19.8813 5.99683L23.5132 8.09351Z"/>
+        <path class="floyo-pointer-arrow" data-dir="down"
+              d="M13.0645 15.3026C12.884 15.6149 12.4504 15.6344 12.2383 15.3611L12.1982 15.3026L10.1016 11.6707C9.90951 11.3374 10.1504 10.9207 10.5352 10.9207H14.7285C15.1133 10.9208 15.3535 11.3374 15.1611 11.6707L13.0645 15.3026Z"/>
+        <path class="floyo-pointer-arrow" data-dir="left"
+              d="M1.75 8.95905C1.43765 8.77862 1.41815 8.34503 1.69141 8.13287L1.75 8.09283L5.38184 5.99616C5.71511 5.8041 6.13184 6.04499 6.13184 6.42975V10.6231C6.13173 11.0079 5.71511 11.2481 5.38184 11.0557L1.75 8.95905Z"/>
     </svg>`;
     footer.appendChild(pointer);
 
