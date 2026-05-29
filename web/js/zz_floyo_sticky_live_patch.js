@@ -69,7 +69,15 @@ function installWheelGuard(root = document) {
             // Keep wheel input inside the sticky note DOM. Otherwise the
             // LiteGraph canvas receives the same wheel event and zooms the
             // whole workflow instead of letting the note content scroll.
-            event.stopPropagation();
+            const scrollBox = event.target.closest?.(".floyo-sticky-body") ||
+                el.closest?.(".floyo-sticky-wrapper")?.querySelector(".floyo-sticky-body");
+            scrollBox?.scrollBy({
+                left: event.deltaX || 0,
+                top: event.deltaY || 0,
+                behavior: "auto",
+            });
+            event.preventDefault();
+            event.stopImmediatePropagation();
         };
         el.addEventListener("wheel", guard, { capture: true, passive: false });
         el.__floyoStickyWheelGuard = guard;

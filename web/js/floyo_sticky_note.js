@@ -1155,7 +1155,16 @@ function setupStickyNote(node) {
     // widget so the sticky body scrolls like a normal document instead.
     const stopCanvasWheelZoom = (e) => {
         if (!wrapper.contains(e.target)) return;
-        e.stopPropagation();
+        const scrollBox = e.target.closest?.(".floyo-sticky-body") || body;
+        if (scrollBox) {
+            scrollBox.scrollBy({
+                left: e.deltaX || 0,
+                top: e.deltaY || 0,
+                behavior: "auto",
+            });
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
     };
     wrapper.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });
     body.addEventListener("wheel", stopCanvasWheelZoom, { capture: true, passive: false });

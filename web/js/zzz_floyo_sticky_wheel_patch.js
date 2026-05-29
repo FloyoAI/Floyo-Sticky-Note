@@ -15,7 +15,15 @@ function installWheelGuard(root = document) {
     root.querySelectorAll(".floyo-sticky-wrapper, .floyo-sticky-body").forEach((el) => {
         if (el[WHEEL_PATCH_FLAG]) return;
         const guard = (event) => {
-            event.stopPropagation();
+            const scrollBox = event.target.closest?.(".floyo-sticky-body") ||
+                el.closest?.(".floyo-sticky-wrapper")?.querySelector(".floyo-sticky-body");
+            scrollBox?.scrollBy({
+                left: event.deltaX || 0,
+                top: event.deltaY || 0,
+                behavior: "auto",
+            });
+            event.preventDefault();
+            event.stopImmediatePropagation();
         };
         el.addEventListener("wheel", guard, { capture: true, passive: false });
         el[WHEEL_PATCH_FLAG] = guard;
