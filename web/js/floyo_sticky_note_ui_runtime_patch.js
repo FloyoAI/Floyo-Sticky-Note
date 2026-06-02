@@ -1,10 +1,14 @@
 /**
- * Floyo Sticky Note UI runtime fix.
+ * Floyo Sticky Note runtime UI patch.
+ * Role: meaningful implementation for cached-module UI fixes.
  *
  * Fresh immutable-dispatch filename for hosted Floyo sessions. It patches
  * cached sticky-note modules by improving paragraph readability, adding a DOM
  * directional notch fallback, and injecting A-/A+ text-size controls into
  * already-rendered toolbars.
+ *
+ * This file should stay behavior-compatible with older cached main modules.
+ * Move any long-term UI behavior into `floyo_sticky_note.js`.
  */
 
 import { app } from "../../../scripts/app.js";

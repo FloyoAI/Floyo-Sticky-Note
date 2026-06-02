@@ -1,0 +1,216 @@
+/**
+ * Floyo Sticky Note visual notch surface owner-document fix.
+ * Role: hosted compatibility module for final color-matched, thin notches.
+ *
+ * Fresh filename to bypass immutable hosted caches. The notch outline uses a
+ * one-pixel visual weight, and the top notch fill matches the title strip.
+ */
+
+import { app } from "../../../scripts/app.js";
+
+const STYLE_ID = "floyo-sticky-visual-notch-surface-owner-style";
+const styledDocuments = new WeakSet();
+
+function injectNotchSurfaceStyles(doc = document) {
+    if (!doc?.head || styledDocuments.has(doc)) return;
+    let style = doc.getElementById(STYLE_ID);
+    if (!style) {
+        style = doc.createElement("style");
+        style.id = STYLE_ID;
+        doc.head.appendChild(style);
+    }
+    styledDocuments.add(doc);
+    style.textContent = `
+        .floyo-sticky-wrapper[data-pointer-dir]::before,
+        .floyo-sticky-wrapper[data-pointer-dir]::after {
+            display: none !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell {
+            --floyo-notch-inner-base: calc(var(--floyo-notch-base, 40px) - 1px);
+            --floyo-notch-inner-reach: calc(var(--floyo-notch-reach, 24px) - 0.5px);
+            overflow: visible !important;
+            box-shadow: 0 0 0 1px var(--floyo-sticky-border, var(--border)) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::before,
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::after {
+            content: "" !important;
+            position: absolute !important;
+            display: none;
+            box-sizing: border-box !important;
+            border: 0 !important;
+            pointer-events: none !important;
+            transform: none !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::before {
+            z-index: 1 !important;
+            background: var(--floyo-sticky-border, var(--border)) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::after {
+            z-index: 2 !important;
+            background: var(--floyo-sticky-notch-fill, var(--floyo-sticky-bg, var(--bg))) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="up"]::before {
+            display: block !important;
+            width: var(--floyo-notch-base) !important;
+            height: var(--floyo-notch-reach) !important;
+            left: 50% !important;
+            top: calc(-1 * var(--floyo-notch-reach)) !important;
+            transform: translateX(-50%) !important;
+            clip-path: polygon(50% 0, 100% 100%, 0 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="up"]::after {
+            display: block !important;
+            width: var(--floyo-notch-inner-base) !important;
+            height: var(--floyo-notch-inner-reach) !important;
+            left: 50% !important;
+            top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+            transform: translateX(-50%) !important;
+            clip-path: polygon(50% 0, 100% 100%, 0 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="down"]::before {
+            display: block !important;
+            width: var(--floyo-notch-base) !important;
+            height: var(--floyo-notch-reach) !important;
+            left: 50% !important;
+            bottom: calc(-1 * var(--floyo-notch-reach)) !important;
+            transform: translateX(-50%) !important;
+            clip-path: polygon(0 0, 100% 0, 50% 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="down"]::after {
+            display: block !important;
+            width: var(--floyo-notch-inner-base) !important;
+            height: var(--floyo-notch-inner-reach) !important;
+            left: 50% !important;
+            bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+            transform: translateX(-50%) !important;
+            clip-path: polygon(0 0, 100% 0, 50% 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="left"]::before {
+            display: block !important;
+            width: var(--floyo-notch-reach) !important;
+            height: var(--floyo-notch-base) !important;
+            left: calc(-1 * var(--floyo-notch-reach)) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            clip-path: polygon(0 50%, 100% 0, 100% 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="left"]::after {
+            display: block !important;
+            width: var(--floyo-notch-inner-reach) !important;
+            height: var(--floyo-notch-inner-base) !important;
+            left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            clip-path: polygon(0 50%, 100% 0, 100% 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="right"]::before {
+            display: block !important;
+            width: var(--floyo-notch-reach) !important;
+            height: var(--floyo-notch-base) !important;
+            right: calc(-1 * var(--floyo-notch-reach)) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            clip-path: polygon(0 0, 100% 50%, 0 100%) !important;
+        }
+        .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="right"]::after {
+            display: block !important;
+            width: var(--floyo-notch-inner-reach) !important;
+            height: var(--floyo-notch-inner-base) !important;
+            right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            clip-path: polygon(0 0, 100% 50%, 0 100%) !important;
+        }
+    `;
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function syncNotchSurface(root = document) {
+    const wrappers = new Set();
+    root.querySelectorAll?.(".floyo-sticky-wrapper").forEach((wrapper) => wrappers.add(wrapper));
+    window.comfy?.app?.graph?._nodes?.forEach((node) => {
+        node.widgets?.forEach((widget) => {
+            if (widget.element?.classList?.contains("floyo-sticky-wrapper")) {
+                wrappers.add(widget.element);
+            }
+        });
+    });
+
+    wrappers.forEach((wrapper) => {
+        injectNotchSurfaceStyles(wrapper.ownerDocument || document);
+        const shell = wrapper.closest(".lg-node");
+        if (!shell) return;
+        const styles = getComputedStyle(wrapper);
+        const border = styles.getPropertyValue("--border").trim();
+        const bg = styles.getPropertyValue("--bg").trim();
+        const header = styles.getPropertyValue("--header").trim();
+        const dir = wrapper.dataset.pointerDir || "";
+        const rect = shell.getBoundingClientRect();
+        const ref = Math.min(rect.width || 320, rect.height || 240);
+        const base = Math.round(clamp(ref * 0.13, 30, 50));
+        const reach = Math.round(clamp(ref * 0.075, 17, 30));
+
+        shell.classList.add("floyo-sticky-node-shell");
+        shell.dataset.pointerDir = dir;
+        if (border) shell.style.setProperty("--floyo-sticky-border", border);
+        if (bg) shell.style.setProperty("--floyo-sticky-bg", bg);
+        if (dir === "up" && header) {
+            shell.style.setProperty("--floyo-sticky-notch-fill", header);
+        } else if (bg) {
+            shell.style.setProperty("--floyo-sticky-notch-fill", bg);
+        }
+        shell.style.setProperty("--floyo-notch-base", `${base}px`);
+        shell.style.setProperty("--floyo-notch-reach", `${reach}px`);
+        shell.style.setProperty("--floyo-notch-inner-base", `${Math.max(1, base - 1)}px`);
+        shell.style.setProperty("--floyo-notch-inner-reach", `${Math.max(1, reach - 0.5)}px`);
+    });
+}
+
+function installNotchSurfaceFix() {
+    injectNotchSurfaceStyles();
+    syncNotchSurface();
+    window.setTimeout(syncNotchSurface, 50);
+    window.setTimeout(syncNotchSurface, 250);
+    window.setTimeout(syncNotchSurface, 1000);
+    if (!window.__floyoStickyNotchSurfaceObserver) {
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === "attributes") {
+                    const target = mutation.target;
+                    if (target?.classList?.contains("floyo-sticky-wrapper")) {
+                        syncNotchSurface(target.parentElement || document);
+                    }
+                    continue;
+                }
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) syncNotchSurface(node);
+                });
+            }
+        });
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["data-pointer-dir", "data-theme", "class", "style"],
+        });
+        window.__floyoStickyNotchSurfaceObserver = observer;
+    }
+    if (!window.__floyoStickyNotchSurfaceTimer) {
+        window.__floyoStickyNotchSurfaceTimer = setInterval(syncNotchSurface, 250);
+    }
+}
+
+installNotchSurfaceFix();
+
+app.registerExtension({
+    name: "Floyo.StickyNote.NotchSurfaceOwnerFix",
+    setup() {
+        installNotchSurfaceFix();
+    },
+    nodeCreated() {
+        queueMicrotask(syncNotchSurface);
+    },
+});

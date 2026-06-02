@@ -1,10 +1,14 @@
 /**
- * Floyo Sticky Note wheel patch.
+ * Floyo Sticky Note element wheel guard.
+ * Role: meaningful implementation for element-level scroll containment.
  *
  * Hosted Floyo loads extension modules from immutable dispatch URLs, so fixes
  * that must affect already-used browsers need a fresh filename. This patch
  * keeps wheel/trackpad input inside the sticky note DOM so the note content
  * scrolls instead of the LiteGraph canvas zooming.
+ *
+ * Superseded by later wheel guards, but kept so older cached sessions still
+ * receive at least element-level wheel containment.
  */
 
 import { app } from "../../../scripts/app.js";

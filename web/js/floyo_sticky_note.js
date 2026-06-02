@@ -1,5 +1,6 @@
 /**
  * Floyo Sticky Note — frontend widget.
+ * Role: canonical implementation.
  *
  * The LiteGraph node chrome is themed to look like the purple/blue/green
  * sticky note — title bar is the header, body is the dark gradient. A
@@ -11,6 +12,9 @@
  *
  * The node carries no inputs and no outputs, so the ComfyUI prompt queue
  * skips it entirely — this node is purely a LiteGraph canvas artifact.
+ *
+ * Keep durable behavior here. The z-prefixed files in this directory are
+ * legacy compatibility shims for immutable hosted caches.
  */
 
 import { app } from "../../../scripts/app.js";
@@ -155,6 +159,32 @@ const NATIVE_TITLE_SENTINEL = "\u00A0";
 const TITLE_FONT = `14px "ArcadePixelNeue", "Courier New", monospace`;
 const TITLE_LETTER_SPACING = 0.7;
 const CHEVRON_COLOR = "#D5B8FF";
+
+function hasOwn(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function rawTitle(value) {
+    return value == null ? "" : String(value);
+}
+
+function titleForNative(value) {
+    const title = rawTitle(value).replace(/\r\n?/g, "\n").replace(/\n/g, " ");
+    return title.length ? title : NATIVE_TITLE_SENTINEL;
+}
+
+function titleForCanvas(value) {
+    const title = titleForNative(value);
+    return title === NATIVE_TITLE_SENTINEL ? "" : title;
+}
+
+function isUserNativeTitle(value) {
+    const title = rawTitle(value);
+    return title !== "" &&
+        title !== NATIVE_TITLE_SENTINEL &&
+        title !== DEFAULT_TITLE &&
+        title !== "FloyoStickyNote";
+}
 // NOTE: the title lives in the LiteGraph title bar, not in the body —
 // so we don't duplicate it as an <h1> here. The default content below
 // doubles as a quick demo of every formatting feature: H1 / H2 / H3
@@ -253,11 +283,220 @@ const STYLES = `
     border: none;
     border-radius: 0;
     overflow: visible;
-    box-shadow: inset 0 0 0 2px var(--border);
+    box-shadow: none;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial, sans-serif;
     font-size: 8px;
     line-height: 1.5;
+}
+
+.floyo-sticky-node-shell {
+    --floyo-sticky-border: ${THEMES.purple.border};
+    --floyo-sticky-bg: ${THEMES.purple.bg};
+    --floyo-sticky-notch-fill: ${THEMES.purple.header};
+    --floyo-notch-base: 40px;
+    --floyo-notch-reach: 24px;
+    --floyo-notch-inner-base: 39px;
+    --floyo-notch-inner-reach: 23.5px;
+    border-radius: 16px !important;
+    overflow: visible !important;
+    box-shadow: 0 0 0 1px var(--floyo-sticky-border) !important;
+}
+.floyo-sticky-node-shell > :first-child {
+    position: relative;
+    z-index: 1;
+    overflow: visible !important;
+    border: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+.floyo-sticky-node-shell::before {
+    content: "";
+    position: absolute;
+    display: none;
+    box-sizing: border-box;
+    border: 0;
+    background: var(--floyo-sticky-border);
+    pointer-events: none;
+    transform: none;
+    z-index: 1;
+}
+.floyo-sticky-node-shell::after {
+    content: "";
+    position: absolute;
+    display: none;
+    box-sizing: border-box;
+    border: 0;
+    background: var(--floyo-sticky-notch-fill);
+    pointer-events: none;
+    transform: none;
+    z-index: 2;
+}
+.floyo-sticky-node-shell[data-pointer-dir="up"]::before {
+    display: block;
+    width: var(--floyo-notch-base);
+    height: var(--floyo-notch-reach);
+    left: 50%;
+    top: calc(-1 * var(--floyo-notch-reach));
+    transform: translateX(-50%);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="up"]::after {
+    display: block;
+    width: var(--floyo-notch-inner-base);
+    height: var(--floyo-notch-inner-reach);
+    left: 50%;
+    top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
+    transform: translateX(-50%);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="down"]::before {
+    display: block;
+    width: var(--floyo-notch-base);
+    height: var(--floyo-notch-reach);
+    left: 50%;
+    bottom: calc(-1 * var(--floyo-notch-reach));
+    transform: translateX(-50%);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="down"]::after {
+    display: block;
+    width: var(--floyo-notch-inner-base);
+    height: var(--floyo-notch-inner-reach);
+    left: 50%;
+    bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
+    transform: translateX(-50%);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="left"]::before {
+    display: block;
+    width: var(--floyo-notch-reach);
+    height: var(--floyo-notch-base);
+    left: calc(-1 * var(--floyo-notch-reach));
+    top: 50%;
+    transform: translateY(-50%);
+    clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="left"]::after {
+    display: block;
+    width: var(--floyo-notch-inner-reach);
+    height: var(--floyo-notch-inner-base);
+    left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
+    top: 50%;
+    transform: translateY(-50%);
+    clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="right"]::before {
+    display: block;
+    width: var(--floyo-notch-reach);
+    height: var(--floyo-notch-base);
+    right: calc(-1 * var(--floyo-notch-reach));
+    top: 50%;
+    transform: translateY(-50%);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.floyo-sticky-node-shell[data-pointer-dir="right"]::after {
+    display: block;
+    width: var(--floyo-notch-inner-reach);
+    height: var(--floyo-notch-inner-base);
+    right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
+    top: 50%;
+    transform: translateY(-50%);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* Final notch override.
+   Older hosted compatibility files used high-specificity important rules for
+   the notch. Keep this block stronger so the canonical node always wins. */
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::before,
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::after {
+    content: "" !important;
+    position: absolute !important;
+    display: none;
+    box-sizing: border-box !important;
+    border: 0 !important;
+    pointer-events: none !important;
+    transform: none !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::before {
+    z-index: 1 !important;
+    background: var(--floyo-sticky-border) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell::after {
+    z-index: 2 !important;
+    background: var(--floyo-sticky-notch-fill) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="up"]::before {
+    display: block !important;
+    width: var(--floyo-notch-base) !important;
+    height: var(--floyo-notch-reach) !important;
+    left: 50% !important;
+    top: calc(-1 * var(--floyo-notch-reach)) !important;
+    transform: translateX(-50%) !important;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="up"]::after {
+    display: block !important;
+    width: var(--floyo-notch-inner-base) !important;
+    height: var(--floyo-notch-inner-reach) !important;
+    left: 50% !important;
+    top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+    transform: translateX(-50%) !important;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="down"]::before {
+    display: block !important;
+    width: var(--floyo-notch-base) !important;
+    height: var(--floyo-notch-reach) !important;
+    left: 50% !important;
+    bottom: calc(-1 * var(--floyo-notch-reach)) !important;
+    transform: translateX(-50%) !important;
+    clip-path: polygon(0 0, 100% 0, 50% 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="down"]::after {
+    display: block !important;
+    width: var(--floyo-notch-inner-base) !important;
+    height: var(--floyo-notch-inner-reach) !important;
+    left: 50% !important;
+    bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+    transform: translateX(-50%) !important;
+    clip-path: polygon(0 0, 100% 0, 50% 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="left"]::before {
+    display: block !important;
+    width: var(--floyo-notch-reach) !important;
+    height: var(--floyo-notch-base) !important;
+    left: calc(-1 * var(--floyo-notch-reach)) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    clip-path: polygon(0 50%, 100% 0, 100% 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="left"]::after {
+    display: block !important;
+    width: var(--floyo-notch-inner-reach) !important;
+    height: var(--floyo-notch-inner-base) !important;
+    left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    clip-path: polygon(0 50%, 100% 0, 100% 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="right"]::before {
+    display: block !important;
+    width: var(--floyo-notch-reach) !important;
+    height: var(--floyo-notch-base) !important;
+    right: calc(-1 * var(--floyo-notch-reach)) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    clip-path: polygon(0 0, 100% 50%, 0 100%) !important;
+}
+.floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="right"]::after {
+    display: block !important;
+    width: var(--floyo-notch-inner-reach) !important;
+    height: var(--floyo-notch-inner-base) !important;
+    right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    clip-path: polygon(0 0, 100% 50%, 0 100%) !important;
 }
 
 /* Theme overrides */
@@ -288,14 +527,15 @@ const STYLES = `
     flex: 0 0 auto;
     display: none;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap;
+    justify-content: flex-start;
+    flex-wrap: wrap;
     gap: 2px;
     padding: 5px 8px;
     background: var(--toolbar);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid rgba(0, 0, 0, 0.22);
-    overflow: hidden;
+    overflow: visible;
+    align-content: flex-start;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-toolbar { display: flex; }
 .floyo-tool-btn {
@@ -313,6 +553,7 @@ const STYLES = `
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
     transition: background 120ms ease, border-color 120ms ease;
 }
 .floyo-tool-btn:hover {
@@ -365,9 +606,34 @@ const STYLES = `
     display: none;
     min-height: 100%;
     caret-color: var(--accent);
+    cursor: text;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-editor  { display: block; }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-display { display: none; }
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-editor,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-editor * {
+    cursor: text !important;
+}
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-toolbar,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-toolbar *,
+.floyo-sticky-wrapper[data-mode="editor"] button,
+.floyo-sticky-wrapper[data-mode="editor"] a,
+.floyo-sticky-wrapper[data-mode="editor"] img,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-embed,
+.floyo-sticky-wrapper[data-mode="editor"] [contenteditable="false"] {
+    cursor: pointer !important;
+}
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer * {
+    cursor: default !important;
+}
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-footer-pointer,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-pointer-arrow,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-swatch,
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-footer-save {
+    cursor: pointer !important;
+}
 
 /* ── Display-mode affordances ──────────────────────────────────────── */
 /* In display mode (read-only) we surface two small controls pinned over
@@ -500,7 +766,7 @@ const STYLES = `
     width: 0;
     height: 0;
     pointer-events: none;
-    z-index: 4;
+    z-index: -1;
 }
 .floyo-sticky-wrapper[data-pointer-dir="up"]::before {
     display: block;
@@ -573,6 +839,10 @@ const STYLES = `
     border-top: 13px solid transparent;
     border-bottom: 13px solid transparent;
     border-left: 13px solid var(--bg);
+}
+.floyo-sticky-wrapper[data-pointer-dir]::before,
+.floyo-sticky-wrapper[data-pointer-dir]::after {
+    display: none !important;
 }
 
 /* ── Embedded media (image-by-URL + video-by-URL) ── */
@@ -781,12 +1051,8 @@ const STYLES = `
     min-width: 0;
 }
 
-/* Compass — Matt's Figma 970-485 spec:
-   - inactive wedges: outlined with white@30% stroke, no fill
-   - active wedge:    filled with white@30% (#FFFFFF4D)
-   - the original Figma "default state" fills one wedge with #D9D9D9
-     to show the look; we treat that as the visual reference and pick
-     #FFFFFF4D for the active state so it works on any theme bg. */
+/* Compass — Figma 26x18 directional picker.
+   Inactive wedges are white@30% outlines; the selected wedge is #D9D9D9. */
 .floyo-footer-pointer {
     width: 26px;
     height: 18px;
@@ -811,7 +1077,7 @@ const STYLES = `
     stroke: rgba(255, 255, 255, 0.30);
 }
 .floyo-pointer-arrow.is-active {
-    fill: rgba(255, 255, 255, 0.30);     /* #FFFFFF4D */
+    fill: #D9D9D9;
     stroke: transparent;
 }
 .floyo-footer-swatches { display: flex; gap: 6px; }
@@ -1053,7 +1319,7 @@ app.registerExtension({
                 // onDrawForeground) and the Vue/DOM node renderer used on
                 // Floyo (where onDrawForeground never runs). setupStickyNote
                 // syncs it to properties.title right after.
-                this.title = (this.properties && this.properties.title) || DEFAULT_TITLE;
+                this.title = titleForNative(this.properties?.title ?? DEFAULT_TITLE);
                 // ComfyUI v3 draws an external green package badge above
                 // custom nodes via node.drawBadges(). This note already has
                 // branded chrome, so suppress that badge for this node only.
@@ -1090,7 +1356,9 @@ function setupStickyNote(node) {
     node.properties = node.properties || {};
     node.properties.theme      ??= DEFAULT_THEME;
     node.properties.font       ??= "Default";
-    node.properties.title      ??= DEFAULT_TITLE;
+    if (!hasOwn(node.properties, "title") || node.properties.title == null) {
+        node.properties.title = DEFAULT_TITLE;
+    }
     node.properties.content    ??= DEFAULT_CONTENT;
     node.properties.pointerDir ??= null;   // null | "up" | "down" | "left" | "right"
 
@@ -1112,7 +1380,22 @@ function setupStickyNote(node) {
     // Vue/DOM node renderer used by Floyo (where onDrawForeground never
     // runs) the title bar reads node.title directly — so it must hold the
     // real title, not a blank sentinel, or it falls back to the class name.
-    node.title = node.properties.title || DEFAULT_TITLE;
+    let lastNativeTitle = "";
+    function applyStoredTitleToNative() {
+        node.title = titleForNative(node.properties.title);
+        lastNativeTitle = node.title;
+    }
+    function syncTitleFromNative() {
+        const current = rawTitle(node.title);
+        if (current === lastNativeTitle) return;
+        node.properties.title = current === NATIVE_TITLE_SENTINEL ? "" : current;
+        applyStoredTitleToNative();
+    }
+    if (isUserNativeTitle(node.title) && node.title !== titleForNative(node.properties.title)) {
+        node.properties.title = rawTitle(node.title);
+    }
+    applyStoredTitleToNative();
+    const titleSyncTimer = window.setInterval(syncTitleFromNative, 500);
     node.drawBadges = function () {};
 
     // ── DOM ──
@@ -1122,6 +1405,30 @@ function setupStickyNote(node) {
     wrapper.dataset.font = node.properties.font;
     wrapper.dataset.mode = "display";
     wrapper.dataset.pointerDir = node.properties.pointerDir || "";
+
+    function syncOuterChrome() {
+        const shell = wrapper.closest(".lg-node");
+        if (!shell) return;
+        const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
+        const [nodeWidth = 0, nodeHeight = 0] = node.size || [];
+        const ref = Math.min(nodeWidth || 320, nodeHeight || 240);
+        const base = Math.round(Math.max(30, Math.min(50, ref * 0.13)));
+        const reach = Math.round(Math.max(17, Math.min(30, ref * 0.075)));
+        shell.classList.add("floyo-sticky-node-shell");
+        shell.dataset.pointerDir = node.properties.pointerDir || "";
+        shell.style.setProperty("--floyo-sticky-border", t.border);
+        shell.style.setProperty("--floyo-sticky-bg", t.bg);
+        shell.style.setProperty("--floyo-sticky-notch-fill", node.properties.pointerDir === "up" ? t.header : t.bg);
+        shell.style.setProperty("--floyo-notch-base", `${base}px`);
+        shell.style.setProperty("--floyo-notch-reach", `${reach}px`);
+        shell.style.setProperty("--floyo-notch-inner-base", `${Math.max(1, base - 1)}px`);
+        shell.style.setProperty("--floyo-notch-inner-reach", `${Math.max(1, reach - 0.5)}px`);
+    }
+    function scheduleOuterChromeSync() {
+        syncOuterChrome();
+        requestAnimationFrame(syncOuterChrome);
+        setTimeout(syncOuterChrome, 50);
+    }
 
     // Toolbar (visible only in editor mode)
     const toolbar = createToolbar();
@@ -1195,6 +1502,7 @@ function setupStickyNote(node) {
         serialize: false,
         hideOnZoom: false,
     });
+    scheduleOuterChromeSync();
     // Widget claims (node body width × body height) so ComfyUI sizes
     // its DOM container correctly and the wrapper inside it just fills
     // 100%. Stable because changing node.size only changes the next
@@ -1506,8 +1814,8 @@ function setupStickyNote(node) {
                 okLabel: "Rename",
             }).then((next) => {
                 if (next == null) return;
-                node.properties.title = next.trim() || DEFAULT_TITLE;
-                node.title = node.properties.title;   // keep Vue/DOM title in sync
+                node.properties.title = rawTitle(next);
+                applyStoredTitleToNative();   // keep Vue/DOM title in sync
                 node.setDirtyCanvas(true, true);
                 node.graph?.setDirtyCanvas?.(true, true);
             });
@@ -1534,6 +1842,7 @@ function setupStickyNote(node) {
     node.onDrawForeground = function (ctx) {
         onDrawForeground?.apply(this, arguments);
         if (!node.size) return;
+        syncTitleFromNative();
         const [w, h] = node.size;
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
 
@@ -1575,7 +1884,7 @@ function setupStickyNote(node) {
         // blank — falls back to DEFAULT_TITLE if properties.title is
         // empty for whatever reason.
         {
-            const titleText = node.properties.title || DEFAULT_TITLE;
+            const titleText = titleForCanvas(node.properties.title);
             ctx.save();
             ctx.font = TITLE_FONT;
             ctx.fillStyle = "#FFFFFF";
@@ -1636,14 +1945,13 @@ function setupStickyNote(node) {
         const reach = Math.max(18, Math.min(70,  ref * 0.10));  // how far the tip protrudes
         const overlap = 2;  // px the base sinks INTO the chrome
         ctx.save();
-        // Fill with the body bg colour so the notch reads as part of
-        // the node's main mass. Stroke only the OUTER two edges with
-        // the same outline colour as the node; do not stroke the base,
-        // otherwise a visible joint line appears where the notch meets
-        // the node body.
-        ctx.fillStyle   = t.bg;
+        // Fill the notch with the surface it touches: top arrows merge into
+        // the title strip, while side/bottom arrows merge into the body.
+        // Stroke only the OUTER two edges; do not stroke the base, otherwise
+        // a visible joint line appears where the notch meets the node body.
+        ctx.fillStyle   = dir === "up" ? t.header : t.bg;
         ctx.strokeStyle = t.border;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.lineJoin = "round";
         ctx.beginPath();
         let notchStroke = null;
@@ -1712,6 +2020,15 @@ function setupStickyNote(node) {
     //   • Arrow-Down at end of pre block → exit to a new paragraph after.
     //   • Arrow-Up at start of pre block → exit to a new paragraph before.
     editor.addEventListener("keydown", (e) => {
+        const key = e.key.toLowerCase();
+        if ((e.metaKey || e.ctrlKey) && (key === "z" || key === "y")) {
+            // Keep editor undo/redo inside the contenteditable. LiteGraph also
+            // listens for these shortcuts globally and can otherwise undo graph
+            // actions instead of note text changes.
+            e.stopPropagation();
+            return;
+        }
+
         const sel = window.getSelection();
         if (!sel || !sel.rangeCount) return;
         const pre = findAncestor(sel.anchorNode, "PRE");
@@ -1749,7 +2066,43 @@ function setupStickyNote(node) {
         display.innerHTML = html;
     }
 
+    const undoStack = [editor.innerHTML];
+    let undoIndex = 0;
+    let restoringUndo = false;
+    function rememberUndoState() {
+        if (restoringUndo) return;
+        const html = editor.innerHTML;
+        if (undoStack[undoIndex] === html) return;
+        undoStack.splice(undoIndex + 1);
+        undoStack.push(html);
+        if (undoStack.length > 100) undoStack.shift();
+        undoIndex = undoStack.length - 1;
+    }
+    function restoreUndoState(nextIndex) {
+        if (nextIndex < 0 || nextIndex >= undoStack.length || nextIndex === undoIndex) return false;
+        undoIndex = nextIndex;
+        restoringUndo = true;
+        editor.innerHTML = undoStack[undoIndex];
+        syncContent();
+        restoringUndo = false;
+        placeCaretAtEnd(editor);
+        refreshToolbarState();
+        return true;
+    }
+    editor.addEventListener("keydown", (e) => {
+        const key = e.key.toLowerCase();
+        if (!(e.metaKey || e.ctrlKey) || (key !== "z" && key !== "y")) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (key === "y" || (key === "z" && e.shiftKey)) {
+            restoreUndoState(undoIndex + 1);
+        } else {
+            restoreUndoState(undoIndex - 1);
+        }
+    }, true);
+
     editor.addEventListener("input", () => {
+        rememberUndoState();
         syncContent();
         refreshToolbarState();
     });
@@ -1758,6 +2111,7 @@ function setupStickyNote(node) {
 
     // ── Toolbar wiring ──
     wireToolbar(toolbar, editor, () => {
+        rememberUndoState();
         syncContent();
         refreshToolbarState();
     });
@@ -1782,6 +2136,7 @@ function setupStickyNote(node) {
     // ── Footer wiring (theme swatches, font, save, pointer direction) ──
     function applyPointerActive() {
         wrapper.dataset.pointerDir = node.properties.pointerDir || "";
+        syncOuterChrome();
         footer.querySelectorAll(".floyo-pointer-arrow").forEach((a) =>
             a.classList.toggle("is-active", a.dataset.dir === node.properties.pointerDir)
         );
@@ -1795,6 +2150,7 @@ function setupStickyNote(node) {
             );
             // Update the LiteGraph chrome colors too — chrome IS the header.
             applyChromeTheme();
+            scheduleOuterChromeSync();
         },
         onSave: exitEditor,
         onPointerDir: (dir) => {
@@ -1888,11 +2244,9 @@ function setupStickyNote(node) {
     node.onSerialize = function (o) {
         onSerialize?.apply(this, arguments);
         // If the user renamed via the Vue/native title bar, node.title is the
-        // freshest value — prefer it so the rename is actually persisted.
-        const liveTitle = (node.title && node.title.trim() && node.title !== NATIVE_TITLE_SENTINEL)
-            ? node.title.trim()
-            : node.properties.title;
-        node.properties.title = liveTitle || DEFAULT_TITLE;
+        // freshest value. Preserve empty/whitespace titles instead of falling
+        // back to the default label.
+        syncTitleFromNative();
         o.floyo_state = {
             theme:      node.properties.theme,
             font:       node.properties.font,
@@ -1920,8 +2274,12 @@ function setupStickyNote(node) {
         // Restore the saved title into node.title so it shows in both the
         // canvas and Vue/DOM node renderers (Floyo uses Vue, where our
         // onDrawForeground Arcade title never runs).
-        node.properties.title = s.title || node.properties.title || DEFAULT_TITLE;
-        node.title = node.properties.title;
+        if (hasOwn(s, "title")) {
+            node.properties.title = rawTitle(s.title);
+        } else if (!hasOwn(node.properties, "title") || node.properties.title == null) {
+            node.properties.title = DEFAULT_TITLE;
+        }
+        applyStoredTitleToNative();
         editor.innerHTML  = s.content || "";
         display.innerHTML = s.content || "";
         footer.querySelectorAll(".floyo-swatch").forEach((sw) =>
@@ -1929,11 +2287,13 @@ function setupStickyNote(node) {
         );
         applyPointerActive();
         applyChromeTheme();
+        scheduleOuterChromeSync();
     };
 
     // Cleanup when the node is removed
     const onRemoved = node.onRemoved;
     node.onRemoved = function () {
+        window.clearInterval(titleSyncTimer);
         document.removeEventListener("mousedown", outsideHandler);
         document.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
         wrapper.removeEventListener("wheel", stopCanvasWheelZoom, { capture: true });
@@ -2269,9 +2629,9 @@ function createFooter() {
     save.type = "button";
     save.className = "floyo-footer-save";
     save.title = "Save & close editor";
-    // Pixel-art check from Matt's Figma 970-485 — Mint/Mint 4 #3CE195
+    // Pixel-art check from Figma — Mint/Mint 4 #3CE195.
     save.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-        <path d="M9.33301 14L4.66699 14V12.833L9.33301 12.833V14ZM4.66699 12.833H2.33301L2.33301 11.667H4.66699V12.833ZM11.667 12.833H9.33301V11.667H11.667V12.833ZM2.33301 11.667H1.16699L1.16699 9.33301H2.33301V11.667ZM12.833 11.667H11.667V9.33301H12.833V11.667ZM6.41699 10.5H5.25V9.33301H6.41699V10.5ZM1.16699 9.33301H0L0 4.66699H1.16699L1.16699 9.33301ZM5.25 9.33301H4.08301V8.16699H5.25V9.33301ZM7.58301 9.33301L6.41699 9.33301V8.16699L7.58301 8.16699V9.33301ZM14 9.33301H12.833L12.833 4.66699H14L14 9.33301ZM4.08301 8.16699H2.91699V7L4.08301 7V8.16699ZM8.75 8.16699H7.58301V7H8.75L8.75 8.16699ZM9.91699 7H8.75V5.83301H9.91699V7ZM11.083 5.83301L9.91699 5.83301V4.66699L11.083 4.66699V5.83301ZM2.33301 4.66699H1.16699L1.16699 2.33301L2.33301 2.33301V4.66699ZM12.833 4.66699H11.083V3.5H11.667V2.33301L12.833 2.33301V4.66699ZM4.66699 2.33301H2.33301L2.33301 1.16699L4.66699 1.16699V2.33301ZM11.667 2.33301H9.33301V1.16699L11.667 1.16699V2.33301ZM9.33301 0V1.16699L4.66699 1.16699V0L9.33301 0Z" fill="#3CE195"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M9.33301 14L4.66699 14V12.833L9.33301 12.833V14ZM4.66699 12.833H2.33301L2.33301 11.667H4.66699V12.833ZM11.667 12.833H9.33301V11.667H11.667V12.833ZM2.33301 11.667H1.16699L1.16699 9.33301H2.33301V11.667ZM12.833 11.667H11.667V9.33301H12.833V11.667ZM6.41699 10.5H5.25V9.33301H6.41699V10.5ZM1.16699 9.33301H0L0 4.66699H1.16699L1.16699 9.33301ZM5.25 9.33301H4.08301V8.16699H5.25V9.33301ZM7.58301 9.33301L6.41699 9.33301V8.16699L7.58301 8.16699V9.33301ZM14 9.33301H12.833L12.833 4.66699H14L14 9.33301ZM4.08301 8.16699H2.91699V7L4.08301 7V8.16699ZM8.75 8.16699H7.58301V7H8.75L8.75 8.16699ZM9.91699 7H8.75V5.83301H9.91699V7ZM11.083 5.83301L9.91699 5.83301V4.66699L11.083 4.66699V5.83301ZM2.33301 4.66699H1.16699L1.16699 2.33301L2.33301 2.33301V4.66699ZM12.833 4.66699H11.083V3.5H11.667V2.33301L12.833 2.33301V4.66699ZM4.66699 2.33301H2.33301L2.33301 1.16699L4.66699 1.16699V2.33301ZM11.667 2.33301H9.33301V1.16699L11.667 1.16699V2.33301ZM9.33301 0V1.16699L4.66699 1.16699V0L9.33301 0Z" fill="#3CE195"/>
     </svg>`;
     footer.appendChild(save);
 

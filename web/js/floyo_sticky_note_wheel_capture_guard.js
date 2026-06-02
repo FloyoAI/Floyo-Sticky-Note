@@ -1,10 +1,14 @@
 /**
- * Floyo Sticky Note wheel capture fix.
+ * Floyo Sticky Note wheel capture guard.
+ * Role: meaningful implementation for document-level wheel containment.
  *
  * LiteGraph can receive wheel input through the canvas before element-level
  * sticky handlers get a chance to contain it. A document capture listener runs
  * earlier in the event path: if the wheel originated inside a sticky note, it
  * scrolls the note body and prevents the canvas zoom handler from seeing it.
+ *
+ * This remains in `web/js` for immutable-cache compatibility. New wheel logic
+ * should be consolidated into the canonical Sticky Note file.
  */
 
 import { app } from "../../../scripts/app.js";

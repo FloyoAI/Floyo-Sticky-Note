@@ -1,9 +1,13 @@
 /**
- * Floyo Sticky Note wheel fix.
+ * Floyo Sticky Note wheel scroll guard.
+ * Role: meaningful implementation for sticky-note scroll handling.
  *
  * Fresh immutable-dispatch filename for the stronger wheel behavior: stop the
  * event before LiteGraph can zoom the canvas, then manually scroll the note
  * body so the visible scrollbar behaves like a normal document scrollbar.
+ *
+ * Kept for hosted sessions that fetched earlier Sticky Note code from
+ * immutable cache. Prefer updating `floyo_sticky_note.js` for durable changes.
  */
 
 import { app } from "../../../scripts/app.js";

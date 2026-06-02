@@ -1,9 +1,13 @@
 /**
- * Floyo Sticky Note runtime wheel fix.
+ * Floyo Sticky Note runtime wheel guard.
+ * Role: meaningful implementation for immediate wheel containment.
  *
  * This fresh filename installs immediately on import. It is intentionally not
  * limited to registerExtension.setup(), because hosted Floyo sessions can keep
  * an existing app lifecycle alive while fetching new extension files.
+ *
+ * Keep for old hosted sessions. Avoid adding unrelated behavior here; put
+ * durable wheel fixes in `floyo_sticky_note.js`.
  */
 
 import { app } from "../../../scripts/app.js";

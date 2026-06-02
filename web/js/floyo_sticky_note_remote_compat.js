@@ -1,5 +1,6 @@
 /**
- * Floyo Sticky Note live patch.
+ * Floyo Sticky Note remote compatibility patch.
+ * Role: meaningful implementation for hosted-cache compatibility.
  *
  * Floyo's hosted ComfyUI imports extension files from an immutable dispatch
  * URL. When the original floyo_sticky_note.js path is already cached in a
@@ -7,6 +8,10 @@
  *
  * This file intentionally has a new filename so the browser must fetch it.
  * It patches the already-registered Sticky Note node in place.
+ *
+ * Keep this file until hosted browsers are no longer likely to have the stale
+ * main module cached. Do not add new behavior here unless cache-busting is
+ * specifically required.
  */
 
 import { app } from "../../../scripts/app.js";
