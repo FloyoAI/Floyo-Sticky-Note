@@ -25,12 +25,39 @@ function syncTitle(node) {
     if (!node || node.type !== NOTE_TYPE) return;
 
     node.properties = node.properties || {};
-    const currentTitle = typeof node.title === "string" ? node.title.trim() : "";
-    const storedTitle = typeof node.properties.title === "string" ? node.properties.title.trim() : "";
-    const nextTitle =
-        storedTitle ||
-        (currentTitle && currentTitle !== SENTINEL_TITLE && currentTitle !== NOTE_TYPE ? currentTitle : "") ||
-        DEFAULT_TITLE;
+    const native = typeof node.title === "string" ? node.title : "";
+    const stored = typeof node.properties.title === "string" ? node.properties.title : "";
+    const nativeTrimmed = native.trim();
+    const storedTrimmed = stored.trim();
+
+    // A native title the user actually typed: not blank, not the sentinel,
+    // not the raw class name, and not the default placeholder. ONLY such a
+    // value is allowed to override the persisted title.
+    //
+    // The previous logic preferred `stored` first (`storedTitle || …`), so a
+    // rename typed into the native / Vue title bar — which only mutates
+    // node.title — was reverted back to the stored value (usually the default
+    // placeholder) on the very next 1s sync tick. The DEFAULT_TITLE guard also
+    // ensures a stray re-render that momentarily shows the placeholder can
+    // never wipe a saved rename.
+    const nativeIsUserRename =
+        nativeTrimmed !== "" &&
+        nativeTrimmed !== SENTINEL_TITLE &&
+        nativeTrimmed !== NOTE_TYPE &&
+        nativeTrimmed !== DEFAULT_TITLE;
+
+    let nextTitle;
+    if (nativeIsUserRename && native !== stored) {
+        // User renamed via the native / Vue title bar — adopt it, don't revert.
+        nextTitle = native;
+    } else if (storedTrimmed !== "") {
+        // Reflect the persisted title back onto the native title bar.
+        nextTitle = stored;
+    } else if (nativeIsUserRename) {
+        nextTitle = native;
+    } else {
+        nextTitle = DEFAULT_TITLE;
+    }
 
     node.properties.title = nextTitle;
     node.title = nextTitle;
