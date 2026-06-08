@@ -590,7 +590,7 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="display"] .floyo-sticky-body {
     padding-top: 10px;
-    padding-bottom: 40px;   /* clear the opaque bottom bar (logo + edit pencil) */
+    padding-bottom: 10px;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
     padding-bottom: 46px;
@@ -674,23 +674,28 @@ const STYLES = `
 }
 .floyo-display-logo:hover { opacity: 1; }
 
-/* Display-mode bottom bar — an OPAQUE strip (mirrors the editor footer) so the
-   logo / edit pencil / grip read cleanly and scrolling content slides BEHIND it
-   instead of showing through. Without the solid background the logo appeared to
-   float over the body text. The editor footer is the same kind of bar, so the
-   two modes now match. (ComfyUI adds ~12px of node padding below the widget in
-   BOTH modes — invisible because the bar is opaque and node-coloured.) */
+/* Display-mode bottom bar — an OPAQUE strip (logo + edit pencil + grip) DROPPED
+   into the empty space at the very bottom of the node, BELOW the body text.
+   ComfyUI reserves a fixed ~36px chrome strip under every node's DOM widget (an
+   `h-5` muted-text footer row + node padding); it is empty for the sticky note,
+   so we park our bar there. `bottom: -34px` pushes the bar that far below the
+   widget so it lands at the node's bottom edge instead of floating over the
+   scrolling body text. Verified live on jacob: the bar sits at the node bottom,
+   the text area stays clean, and nothing is clipped (every node ancestor is
+   overflow:visible). The negative offset tracks ComfyUI's fixed footer height —
+   if that ever changes, this is the one number to retune. */
 .floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
     left: 0;
     right: 0;
-    bottom: 0;
-    padding: 5px 12px;
+    bottom: -34px;
+    padding: 4px 12px;
     gap: 8px;
-    min-height: 30px;
+    min-height: 28px;
     box-sizing: border-box;
     background: var(--toolbar);
     border-top: 1px solid rgba(0, 0, 0, 0.22);
-    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.04);
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
 /* Edit button — pixel-art pencil on a black "box" background, per
