@@ -653,6 +653,27 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
 
+/* Left cluster in display mode: Floyo wordmark + edit pencil, bottom-left. */
+.floyo-display-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+}
+/* Floyo wordmark shown at the bottom-left in display mode — mirrors the
+   editor-footer logo (just slightly smaller). Clickable → floyo.ai. */
+.floyo-display-logo {
+    height: 16px;
+    width: auto;
+    flex: 0 0 auto;
+    pointer-events: all;
+    cursor: pointer;
+    user-select: none;
+    opacity: 0.9;
+    transition: opacity 120ms ease;
+}
+.floyo-display-logo:hover { opacity: 1; }
+
 /* Edit button — pixel-art pencil on a black "box" background, per
    Matt's Figma 930-4896. Square card, slight rounding, black fill so
    the pencil reads on every theme colour. */
@@ -1473,11 +1494,13 @@ function setupStickyNote(node) {
     // pencil's `fill="#fff"` overrides the original black so it reads on
     // the new black button background.
     displayActions.innerHTML = `
+        <div class="floyo-display-left">
         <button type="button" class="floyo-display-edit" title="Edit">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
             </svg>
         </button>
+        </div>
         <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
                 <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
@@ -1486,6 +1509,23 @@ function setupStickyNote(node) {
             </svg>
         </div>
     `;
+
+    // Floyo wordmark, bottom-left in DISPLAY mode (mirrors the editor footer
+    // logo). The editor footer is hidden in display mode, so without this the
+    // bottom-left was blank once the user saved/closed the editor.
+    const displayLogo = document.createElement("img");
+    displayLogo.className = "floyo-display-logo";
+    displayLogo.src = FLOYO_LOGO();
+    displayLogo.alt = "Floyo";
+    displayLogo.draggable = false;
+    displayLogo.title = "Open Floyo";
+    displayLogo.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+    displayLogo.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open("https://www.floyo.ai", "_blank", "noopener,noreferrer");
+    });
+    displayActions.querySelector(".floyo-display-left")?.prepend(displayLogo);
 
     body.append(display, editor, imgTools);
 
