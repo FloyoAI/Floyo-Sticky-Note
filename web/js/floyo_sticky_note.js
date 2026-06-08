@@ -687,7 +687,11 @@ const STYLES = `
 .floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
     left: 0;
     right: 0;
-    bottom: -34px;
+    /* !important: a fix file (floyo_sticky_note_visual_compat.js) sets
+       .floyo-display-actions bottom -2px as !important, which a plain rule
+       cannot beat. With !important plus this rule's higher specificity, ours
+       wins and the bar drops into ComfyUI's empty footer strip at the bottom. */
+    bottom: -36px !important;
     padding: 4px 12px;
     gap: 8px;
     min-height: 28px;
