@@ -590,7 +590,7 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="display"] .floyo-sticky-body {
     padding-top: 10px;
-    padding-bottom: 14px;
+    padding-bottom: 40px;   /* clear the opaque bottom bar (logo + edit pencil) */
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
     padding-bottom: 46px;
@@ -673,6 +673,25 @@ const STYLES = `
     transition: opacity 120ms ease;
 }
 .floyo-display-logo:hover { opacity: 1; }
+
+/* Display-mode bottom bar — an OPAQUE strip (mirrors the editor footer) so the
+   logo / edit pencil / grip read cleanly and scrolling content slides BEHIND it
+   instead of showing through. Without the solid background the logo appeared to
+   float over the body text. The editor footer is the same kind of bar, so the
+   two modes now match. (ComfyUI adds ~12px of node padding below the widget in
+   BOTH modes — invisible because the bar is opaque and node-coloured.) */
+.floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 5px 12px;
+    gap: 8px;
+    min-height: 30px;
+    box-sizing: border-box;
+    background: var(--toolbar);
+    border-top: 1px solid rgba(0, 0, 0, 0.22);
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
 
 /* Edit button — pixel-art pencil on a black "box" background, per
    Matt's Figma 930-4896. Square card, slight rounding, black fill so
