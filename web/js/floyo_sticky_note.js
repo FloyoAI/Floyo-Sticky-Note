@@ -677,8 +677,8 @@ const STYLES = `
 /* Display-mode bottom bar — an OPAQUE strip (logo + edit pencil + grip) DROPPED
    into the empty space at the very bottom of the node, BELOW the body text.
    ComfyUI reserves a fixed ~36px chrome strip under every node's DOM widget (an
-   `h-5` muted-text footer row + node padding); it is empty for the sticky note,
-   so we park our bar there. `bottom: -34px` pushes the bar that far below the
+   h-5 muted-text footer row + node padding); it is empty for the sticky note,
+   so we park our bar there. bottom:-34px pushes the bar that far below the
    widget so it lands at the node's bottom edge instead of floating over the
    scrolling body text. Verified live on jacob: the bar sits at the node bottom,
    the text area stays clean, and nothing is clipped (every node ancestor is
