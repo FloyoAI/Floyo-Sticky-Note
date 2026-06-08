@@ -653,8 +653,8 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
 
-/* Left cluster in display mode: Floyo wordmark + edit pencil, bottom-left. */
-.floyo-display-left {
+/* Right cluster in display mode: edit pencil + resize grip, bottom-right. */
+.floyo-display-right {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -674,32 +674,28 @@ const STYLES = `
 }
 .floyo-display-logo:hover { opacity: 1; }
 
-/* Display-mode bottom bar — an OPAQUE strip (logo + edit pencil + grip) DROPPED
-   into the empty space at the very bottom of the node, BELOW the body text.
-   ComfyUI reserves a fixed ~36px chrome strip under every node's DOM widget (an
-   h-5 muted-text footer row + node padding); it is empty for the sticky note,
-   so we park our bar there. bottom:-34px pushes the bar that far below the
-   widget so it lands at the node's bottom edge instead of floating over the
-   scrolling body text. Verified live on jacob: the bar sits at the node bottom,
-   the text area stays clean, and nothing is clipped (every node ancestor is
-   overflow:visible). The negative offset tracks ComfyUI's fixed footer height —
-   if that ever changes, this is the one number to retune. */
+/* Display-mode bottom bar — a full-width strip that MIRRORS ComfyUI's top title
+   bar: it spans the node's left/right edges, fills the empty footer chrome strip
+   at the very bottom of the node (below the body text), and has the same height,
+   theme colour, and rounded bottom corners as the title bar.
+   The negative left/right/bottom reach PAST our DOM widget into the node's fixed
+   chrome: the widget is inset about 14px on each side and sits about 37px above
+   the node's bottom edge. These are fixed ComfyUI local-px values (zoom
+   independent), measured live on jacob.
+   !important: a fix file (visual_compat) sets bottom -2px as !important, so a
+   plain rule cannot win; !important plus this rule's higher specificity makes
+   ours win. */
 .floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
-    left: 0;
-    right: 0;
-    /* !important: a fix file (floyo_sticky_note_visual_compat.js) sets
-       .floyo-display-actions bottom -2px as !important, which a plain rule
-       cannot beat. With !important plus this rule's higher specificity, ours
-       wins and the bar drops into ComfyUI's empty footer strip at the bottom. */
-    bottom: -36px !important;
-    padding: 4px 12px;
+    left: -14px !important;
+    right: -13px !important;
+    bottom: -37px !important;
+    min-height: 37px !important;
+    padding: 0 14px;
     gap: 8px;
-    min-height: 28px;
     box-sizing: border-box;
-    background: var(--toolbar);
-    border-top: 1px solid rgba(0, 0, 0, 0.22);
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
+    background: var(--header);
+    border-top: none;
+    border-radius: 0 0 16px 16px;
 }
 
 /* Edit button — pixel-art pencil on a black "box" background, per
@@ -1522,19 +1518,19 @@ function setupStickyNote(node) {
     // pencil's `fill="#fff"` overrides the original black so it reads on
     // the new black button background.
     displayActions.innerHTML = `
-        <div class="floyo-display-left">
+        <div class="floyo-display-right">
         <button type="button" class="floyo-display-edit" title="Edit">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
             </svg>
         </button>
-        </div>
         <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
                 <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
                 <line x1="12" y1="7" x2="7" y2="12" stroke="white" stroke-linecap="round"/>
                 <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
             </svg>
+        </div>
         </div>
     `;
 
@@ -1553,7 +1549,7 @@ function setupStickyNote(node) {
         e.stopPropagation();
         window.open("https://www.floyo.ai", "_blank", "noopener,noreferrer");
     });
-    displayActions.querySelector(".floyo-display-left")?.prepend(displayLogo);
+    displayActions.prepend(displayLogo);
 
     body.append(display, editor, imgTools);
 
