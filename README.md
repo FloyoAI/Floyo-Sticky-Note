@@ -1,243 +1,198 @@
-# Floyo Sticky Note
+<div align="center">
 
-A rich-text sticky-note node for **ComfyUI**. Drop it onto the canvas to
-document and annotate your workflows right next to the nodes they explain.
-Carries no inputs or outputs, so the prompt queue skips it at run time —
-it exists purely as visual documentation on the graph.
+# 📝 Floyo Sticky Note
 
-![Floyo Sticky Note — default view](image.png)
+### Beautiful, rich‑text sticky notes for **ComfyUI** — document your workflow right on the canvas.
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#-license)
+[![ComfyUI](https://img.shields.io/badge/ComfyUI-custom%20node-7C3AED.svg)](https://github.com/comfyanonymous/ComfyUI)
+[![Made by Floyo](https://img.shields.io/badge/made%20by-floyo.ai-2C1852.svg)](https://floyo.ai)
+[![Canvas only](https://img.shields.io/badge/runtime-never%20executes-34D399.svg)](#-what-it-doesnt-do)
 
-## Features
+![Floyo Sticky Note](image.png)
 
-- **Three visual states**
-  - **Display** — read-only rendered content with the header, body, and
-    optional direction notch.
-  - **Editor** — full rich-text editing with a formatting toolbar and
-    theme/font/save controls in the footer.
-  - **Collapsed** — only the title bar is shown; click the chevron in the
-    title bar to expand back.
+</div>
 
-- **Rich-text formatting**
-  - Three heading levels (H₁, H₂, H₃).
-  - Bold, italic, underline, strikethrough.
-  - Clear formatting (`Tₓ`).
-  - Inline `code` spans and fenced code blocks.
-  - Bullet lists and numbered lists.
-
-- **Media embeds**
-  - **Images** by URL (a small popup asks for the URL).
-  - **Videos** from **YouTube** and **Vimeo** — paste the URL and the
-    note renders a thumbnail with a play button; click the thumbnail to
-    load the video player inline.
-
-- **Three themes** — Purple (default), Blue, Green. Switch from the
-  swatches in the footer; the title bar, body, accent colours, code
-  blocks, and direction notch all re-tint together.
-
-- **Font picker** — Default (system), Roboto, Arcade, Janeiro. Choose
-  from the dropdown in the footer.
-
-- **Direction notch** — A four-way compass in the footer lets you
-  project a triangular notch out of any edge of the node, so a reader
-  knows which neighbouring node the sticky is annotating.
-
-- **Editable title** — Double-click the title bar to rename the note.
-
-- **Resizable** — Drag the standard LiteGraph resize handle to make the
-  note larger or smaller; the content and footer reflow automatically.
-
-- **Persistent** — All state (title, content, theme, font, pointer
-  direction) is saved with the workflow JSON. Reload the workflow and
-  the note returns exactly as you left it.
+> **TL;DR** — Drop a gorgeous note next to your nodes to explain *what a workflow does and why*. It has **no inputs and no outputs**, so the prompt queue skips it — it never runs, it just makes your graph readable. Think of it as a **comment block for ComfyUI**, with full rich‑text, themes, media and direction pointers.
 
 ---
 
-## Installation
+## Why you'll want it
 
-### Option A — Clone with Git
+- 🧭 **Make workflows self‑explaining** — annotate steps so anyone (including future‑you) gets it at a glance.
+- 🎨 **On‑brand & pretty** — 4 polished themes, pixel‑art title font, clean typography.
+- 🖊️ **Real rich text** — headings, lists, code, links, images and videos — not just plain text.
+- 🎯 **Point at things** — a direction notch shows *which* node a note is talking about.
+- 💾 **Zero‑friction & safe** — autosaves into the workflow JSON, and **never touches execution** (no inputs/outputs, nothing to slow your runs).
 
+---
+
+## ✨ At a glance — everything this node does
+
+| Area | Options |
+| --- | --- |
+| **States** | Display • Editor • Collapsed |
+| **Headings** | H₁ • H₂ • H₃ • **P** (back to paragraph) |
+| **Text size** | A− • A+ (shrink / grow selected text) |
+| **Inline style** | **Bold** • *Italic* • <u>Underline</u> • ~~Strikethrough~~ • Tₓ (clear formatting) |
+| **Blocks** | Code block • Bullet list • Numbered list |
+| **Insert** | Image (URL) • Video (YouTube / Vimeo) • Link • Divider |
+| **Themes** | 🟣 Purple (default) • 🔵 Blue • 🟢 Green • ⚫ Grey |
+| **Pointer** | Direction notch — up / down / left / right |
+| **Title** | Inline rename |
+| **Layout** | Collapse / expand • Drag to move • Resize • Scroll inside note |
+| **Clipboard** | Copy keeps the note's colour • Paste cleans to plain text |
+| **Persistence** | Title, content, theme, font, pointer — all saved with the workflow |
+
+Each option is explained in its own short section below. 👇
+
+---
+
+## 📦 Install
+
+**Git (recommended)**
 ```bash
 cd /path/to/ComfyUI/custom_nodes
 git clone https://github.com/FloyoAI/Floyo-Sticky-Note.git
 ```
+Restart ComfyUI, then add it via **Add Node → Floyo → Notes → 📝 Floyo Sticky Note**.
 
-Restart ComfyUI. The node appears under
-**Add Node → Floyo → Notes → 📝 Floyo Sticky Note**.
+**Manual** — download the repo ZIP, extract into ComfyUI's `custom_nodes/`, restart.
 
-### Option B — Manual download
-
-1. Download this repository as a ZIP from GitHub.
-2. Extract it into your ComfyUI `custom_nodes/` directory.
-3. Restart ComfyUI.
-
-### Updating
-
+**Update**
 ```bash
-cd /path/to/ComfyUI/custom_nodes/Floyo-Sticky-Note
-git pull
+cd custom_nodes/Floyo-Sticky-Note && git pull
+```
+Restart ComfyUI and hard‑refresh the browser (`Cmd/Ctrl + Shift + R`) so the latest front‑end loads.
+
+---
+
+## 🚀 Quick start
+
+1. **Add** the node to the canvas.
+2. **Double‑click the body** to enter the editor.
+3. Type, format with the toolbar, pick a theme.
+4. **Save** with the green ✓ — or just click anywhere outside the note.
+
+That's it. Your note is saved with the workflow.
+
+---
+
+## 🧰 Editor toolbar — what each button does
+
+Open the editor (double‑click the body) and the toolbar appears at the top. Select text first, then click; for block buttons (headings, lists, code) just place the cursor on the line.
+
+| Button | Does |
+| --- | --- |
+| **H₁ / H₂ / H₃** | Turn the current line into a heading (large / medium / small). |
+| **P** | Turn a heading back into a normal **paragraph** (paragraph font). |
+| **A− / A+** | Shrink / grow the **selected** text size, in small steps. |
+| **B** | **Bold** the selection. |
+| **I** | *Italic* the selection. |
+| **U** | <u>Underline</u> the selection. |
+| **S** | ~~Strikethrough~~ the selection. |
+| **Tₓ** | Clear inline formatting from the selection. |
+| **`</>`** | Wrap the line in a **code block** (monospaced). |
+| **• ≡** | **Bullet** list. |
+| **1 ≡** | **Numbered** list. |
+| **🖼️** | Insert an **image** by URL. |
+| **▶️** | Insert a **YouTube / Vimeo** video (lazy preview — the player loads only on click). |
+| **🔗** | Turn the selection into a **link** (opens in a new tab). |
+| **➖** | Insert a horizontal **divider** line. |
+
+> **Tip:** clicking an active heading toggles it back to a paragraph too — the **P** button just makes that explicit.
+
+### Working with media
+Hover any inserted image/video to get a mini toolbar: **−** smaller, **+** bigger, **× Remove**. A fresh paragraph is auto‑added below media so you can keep typing.
+
+---
+
+## 🎛️ Footer controls
+
+The footer shows in editor mode, left → right:
+
+- **Floyo logo** — opens [floyo.ai](https://floyo.ai) in a new tab.
+- **Theme swatches** — switch between **Purple** (default), **Blue**, **Green**, **Grey**. The whole note (title bar, body, accent, code, notch) re‑tints together.
+- **Direction notch (compass)** — click **up / down / left / right** to project a triangular pointer from that edge, so readers know which node the sticky annotates. Click the same arrow again to remove it.
+- **Save ✓** — saves your edits and returns to display mode.
+
+---
+
+## 🪟 States & gestures
+
+| Action | Result |
+| --- | --- |
+| **Double‑click the body** | Enter the editor. |
+| **Click the chevron** in the title bar | Collapse to just the title bar (▼ ↔ ▶) — great when the canvas is crowded. |
+| **Double‑click the title bar** | Rename the note inline. |
+| **Drag the title bar** | Move the note (standard LiteGraph). |
+| **Drag the bottom‑right corner** | Resize; the content reflows. |
+| **Scroll inside the note** | Scrolls the note's content instead of zooming the canvas. |
+| **Click outside the note** | Saves and exits the editor. |
+
+### Clipboard
+- **Copy** from a note keeps the note's **text colour**, so it stays readable when pasted into other rich‑text apps (instead of turning black).
+- **Paste** into a note is cleaned to **plain text**, so it picks up the note's styling instead of dragging in foreign formatting.
+
+---
+
+## 💾 Saving & persistence
+
+Everything is stored with the workflow JSON under a single `floyo_state` key:
+
+```jsonc
+{
+  "floyo_state": {
+    "title":      "K‑Sampler settings",
+    "content":    "<h1>…</h1><p>…</p>",
+    "theme":      "purple",
+    "font":       "Default",
+    "pointerDir": "down"
+  }
+}
 ```
 
-Then restart ComfyUI and hard-refresh your browser
-(`Cmd+Shift+R` on macOS, `Ctrl+Shift+R` on Windows/Linux) so the new
-front-end JavaScript is loaded.
+Reload the workflow and the note returns exactly as you left it.
 
 ---
 
-## How to use
+## 🧩 What it *doesn't* do
 
-### Add a note
-
-Right-click an empty area of the canvas (or use the search/Add Node
-menu) and pick **Floyo → Notes → 📝 Floyo Sticky Note**. A new note
-appears with a sample of every formatting feature, so you can see what
-each control does at a glance.
-
-### Edit the content
-
-**Double-click anywhere inside the body** to enter editor mode. The
-formatting toolbar appears at the top of the body and the controls
-footer appears at the bottom.
-
-### Formatting toolbar
-
-The toolbar runs left-to-right with three groups:
-
-| Group   | Buttons                                              |
-| ------- | ---------------------------------------------------- |
-| Headings| H₁, H₂, H₃ — apply heading 1, 2, or 3 to the current line. |
-| Inline  | **B** (bold), *I* (italic), <u>U</u> (underline), ~~S~~ (strikethrough), **Tₓ** (clear formatting). |
-| Blocks  | `< >` (code block), bullet list, numbered list, image, video. |
-
-Selection-based — pick text first, then click the formatting button.
-For block-level buttons (headings, lists, code), placing the cursor on
-a line is enough.
-
-### Inserting images
-
-Click the **image** button on the toolbar. A small popup appears.
-Paste any image URL (HTTPS recommended) and click **OK**. The image
-is inserted at the cursor position; you can keep typing immediately
-below it.
-
-### Inserting videos
-
-Click the **video** button. Paste a YouTube or Vimeo URL. Both
-short-form (`youtu.be/...`) and long-form (`youtube.com/watch?v=...`)
-YouTube URLs are supported; for Vimeo, any `vimeo.com/<id>` URL works.
-
-The video is inserted as a **preview card** showing the thumbnail and
-a play button. The actual video player only loads when you click play
-— so notes with several embedded videos still open quickly.
-
-### Resizing or removing images and videos
-
-Hover over any inserted image or video. A small floating toolbar
-appears in the upper-right corner of the media:
-
-- **−** make the media smaller (in 10% steps).
-- **+** make the media bigger (capped at the body width).
-- **× Remove** delete the media.
-
-### Title
-
-The title sits in the bar at the top of the note. **Double-click**
-the title bar to open an inline rename prompt.
-
-### Themes
-
-Three theme swatches sit in the footer between the logo and the font
-picker. Click a swatch to switch the entire note (header, body,
-accent, code, notch) to that theme.
-
-### Font
-
-The dropdown to the right of the theme swatches sets the font for the
-body text. The default uses your system stack; Roboto, Arcade, and
-Janeiro are alternative options. Custom fonts (Arcade, Janeiro) need
-to be available on the host machine for the browser to render them;
-otherwise the system default is used.
-
-### Direction notch (pointer)
-
-The compass icon next to the save button has four arrow paths — up,
-down, left, right. Click any arrow to add a triangular notch
-protruding from that edge of the node, indicating which neighbouring
-node the sticky is annotating. Click the same arrow again to clear
-the notch.
-
-### Collapsing the note
-
-Click the small chevron icon (▼) in the upper-right corner of the
-title bar. The note collapses to just the title bar. Click the
-chevron again (▶) to expand it back. Useful when many notes are
-crowding the canvas.
-
-### Saving and exiting editor mode
-
-- Click the **green ✓** button in the footer.
-- Or click **anywhere on the canvas** outside the note.
-
-Either action saves your changes and returns the note to display
-mode. Your edits persist with the workflow JSON.
+This node is **purely documentation**. It has **no inputs, no outputs**, contributes nothing to the prompt queue, and produces no images/latents/tensors. It's the ComfyUI equivalent of a code comment — for the humans, invisible to the run‑time graph.
 
 ---
 
-## Tips
+## 🛠️ Troubleshooting
 
-- **Type below media without effort.** When you insert an image or
-  video, a fresh paragraph is created right after it and the cursor
-  is placed inside — start typing immediately.
-- **Escape a code block.** Inside a fenced code block, press **Enter**
-  on an empty line to escape back to a normal paragraph. You can
-  also use **Arrow Down** when the cursor is at the end of the block
-  or **Arrow Up** at the start.
-- **Selection is preserved across the URL popups.** Wherever your
-  cursor was in the body, the image or video lands at that position
-  when you confirm the popup.
+| Problem | Fix |
+| --- | --- |
+| Node missing from the Add‑Node menu | Make sure the folder is a **direct child** of `custom_nodes/`, then check ComfyUI's terminal for import errors. |
+| Note looks plain / unstyled or behaves oddly | Your browser cached old front‑end JS. **Hard‑refresh** (`Cmd/Ctrl + Shift + R`). |
+| Video shows "unavailable" | That video disabled embedding — open the original URL on YouTube/Vimeo. |
 
 ---
 
-## Troubleshooting
+## 🤝 Contributing
 
-**The node doesn't appear in the Add Node menu.**
-Check the terminal where ComfyUI is running. Python import errors are
-printed there; the most common cause is the package being one level
-too deep inside `custom_nodes/`. The directory you cloned should be a
-**direct child** of `custom_nodes/`.
+Issues and PRs are welcome.
 
-**The node appears but looks unstyled (plain grey).**
-Your browser is serving a cached older version of the front-end
-JavaScript. Open DevTools (F12), check **Disable cache** in the
-Network tab, then hard-refresh the page.
-
-**The custom fonts (Arcade, Janeiro) aren't applied.**
-These are Floyo brand fonts. The package ships **Arcade Pixel Neue**
-(used for the title bar) inside the `web/assets/` folder, so it
-always works. Arcade and Janeiro selected from the **body** font
-picker need to be installed on the host machine; otherwise the
-browser falls back to the system stack.
-
-**The video shows "Video unavailable".**
-Some YouTube videos disable embedding. The thumbnail will still
-appear; clicking the play button replaces the thumbnail with the
-embedded player. If the embedded player refuses to load, open the
-original URL on YouTube directly.
+1. Fork the repo and create a branch.
+2. The front‑end lives in `web/js/`; the (no‑op) Python class is in `nodes.py`.
+3. Keep changes focused, test in a real ComfyUI canvas, and hard‑refresh before verifying.
+4. Open a pull request describing the change.
 
 ---
 
-## What it doesn't do
+## 📄 License
 
-This node is purely a canvas-side documentation artifact. It has
-**no inputs and no outputs**, contributes nothing to the prompt
-queue, and produces no images, latents, or tensors. Think of it as
-the ComfyUI equivalent of a comment block in source code — useful
-for the humans reading the workflow, invisible to the run-time
-execution graph.
+Released under the **MIT License** — see [`LICENSE`](LICENSE).
 
 ---
 
-## License
+<div align="center">
 
-MIT.
+**Built with care by [Floyo](https://floyo.ai) 💜**
+
+Copyright © Floyo — [floyo.ai](https://floyo.ai)
+
+</div>
