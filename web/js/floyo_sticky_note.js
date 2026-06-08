@@ -593,7 +593,9 @@ const STYLES = `
     padding-bottom: 10px;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
-    padding-bottom: 46px;
+    /* small: the editor footer now sits in the node's bottom chrome (below the
+       widget), not over the body, so the editor uses the full widget height. */
+    padding-bottom: 10px;
 }
 .floyo-sticky-display, .floyo-sticky-editor {
     outline: none;
@@ -686,7 +688,7 @@ const STYLES = `
    plain rule cannot win; !important plus this rule's higher specificity makes
    ours win. */
 .floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
-    left: -14px !important;
+    left: -13px !important;
     right: -13px !important;
     bottom: -37px !important;
     min-height: 37px !important;
@@ -1068,6 +1070,19 @@ const STYLES = `
     overflow: hidden;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
+
+/* Editor footer — same treatment as the display-mode bottom bar: drop it into
+   the node's empty bottom chrome so it spans the node edges and reaches the
+   bottom edge with no gap below. Fixed ComfyUI local-px offsets: the widget is
+   inset about 13px each side and sits about 37px above the node bottom; rounded
+   bottom corners match the node. */
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer {
+    left: -13px !important;
+    right: -13px !important;
+    bottom: -37px !important;
+    min-height: 37px !important;
+    border-radius: 0 0 16px 16px;
+}
 
 /* Floyo full-wordmark logo on the bottom-left.
    Per Ashna + Matt's Slack agreement ("Full logo is better - smaller?" /
