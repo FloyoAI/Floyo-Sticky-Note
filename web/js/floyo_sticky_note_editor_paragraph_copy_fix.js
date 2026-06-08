@@ -64,11 +64,10 @@ function injectParagraphButton(toolbar) {
     h3.insertAdjacentElement("afterend", btn);
 }
 
-function injectAllParagraphButtons(root = document) {
-    const scope = root.querySelectorAll ? root : document;
-    scope.querySelectorAll(TOOLBAR_SEL).forEach(injectParagraphButton);
-    // If `root` is itself a toolbar (observer handed us the added node), handle it.
-    if (root.matches && root.matches(TOOLBAR_SEL)) injectParagraphButton(root);
+function injectAllParagraphButtons() {
+    try {
+        document.querySelectorAll(TOOLBAR_SEL).forEach(injectParagraphButton);
+    } catch (_) {}
 }
 
 /* ── FIX 2: copy keeps the note's text colour ────────────────────────────── */
@@ -129,34 +128,23 @@ function installCopyHandler() {
     document.addEventListener("copy", handleCopy, true); // capture phase
 }
 
-function installObserver() {
-    if (window.__floyoStickyParagraphBtnObserver) return;
-    const observer = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-            m.addedNodes?.forEach((n) => {
-                if (n.nodeType === Node.ELEMENT_NODE) injectAllParagraphButtons(n);
-            });
-        }
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.__floyoStickyParagraphBtnObserver = observer;
-}
-
 function install() {
     installCopyHandler();
-    installObserver();
     injectAllParagraphButtons();
-    [0, 250, 1000].forEach((d) => setTimeout(injectAllParagraphButtons, d));
+    // NO global MutationObserver: a childList+subtree observer on the whole
+    // document fired on EVERY ComfyUI DOM insertion and contributed to a
+    // canvas-load slowdown. Toolbars are created once per node at setup, so a
+    // light poll + an initial salvo inject the P button reliably and cheaply.
+    [0, 250, 700].forEach((d) => setTimeout(injectAllParagraphButtons, d));
     if (!window.__floyoStickyParagraphBtnTimer) {
-        // Backstop: toolbars are created once per node at setup; a slow poll
-        // catches any the observer missed. Idempotent (guards on existing P).
-        window.__floyoStickyParagraphBtnTimer = setInterval(injectAllParagraphButtons, 1500);
+        window.__floyoStickyParagraphBtnTimer = setInterval(injectAllParagraphButtons, 1200);
     }
 }
 
 app.registerExtension({
     name: "Floyo.StickyNote.EditorParagraphCopyFix",
     async setup() {
-        install();
+        // Never let a setup error break the ComfyUI canvas.
+        try { install(); } catch (_) {}
     },
 });

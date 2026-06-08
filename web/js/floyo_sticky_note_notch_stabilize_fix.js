@@ -232,60 +232,37 @@ function writeNotch(wrapper, shell, node) {
     setVar(shell, "--floyo-notch-inner-reach", `${Math.max(1, reach - 0.5)}px`);
 }
 
-/* Walk every sticky note and write the authoritative notch. */
-function syncAllNotches(root = document) {
-    const wrappers = new Set();
-    root.querySelectorAll?.(".floyo-sticky-wrapper").forEach((w) => wrappers.add(w));
-    graphNodes().forEach((node) => {
-        (node.widgets || []).forEach((w) => {
-            if (w.element?.classList?.contains?.("floyo-sticky-wrapper")) {
-                wrappers.add(w.element);
+/* Walk every sticky note and write the authoritative notch. Builds a single
+ * element->node map per pass (cheap, O(nodes)) and is fully wrapped so a stray
+ * detached node / odd style can never throw out of the poll and break ComfyUI. */
+function syncAllNotches() {
+    try {
+        const elToNode = new Map();
+        for (const node of graphNodes()) {
+            for (const w of (node.widgets || [])) {
+                if (w && w.element) elToNode.set(w.element, node);
             }
-        });
-    });
-
-    wrappers.forEach((wrapper) => {
-        const shell = wrapper.closest(".lg-node");
-        if (!shell) return;
-        const node = findNodeForWrapper(wrapper);
-        writeNotch(wrapper, shell, node);
-    });
-}
-
-/* ── Owner observer: a SINGLE observer that recomputes on structural / model-driven
- *    attributes (theme + dir + class) and node add/remove, NOT on "style".
- *    Excluding "style" is deliberate — our own setVar writes mutate style, so
- *    watching style would re-arm exactly the loop we are killing. Geometry that
- *    depends on node.size is kept current by the slow backstop poll below. ──────── */
-function installOwnerObserver() {
-    if (window.__floyoStickyNotchStabilizeObserver &&
-        window.__floyoStickyNotchStabilizeObserver !== SENTINEL) {
-        return;
-    }
-    const observer = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-            if (m.type === "attributes") {
-                const target = m.target;
-                if (target?.classList?.contains?.("floyo-sticky-wrapper") ||
-                    target?.classList?.contains?.("lg-node")) {
-                    syncAllNotches(target.parentElement || document);
-                }
-                continue;
-            }
-            m.addedNodes?.forEach((n) => {
-                if (n.nodeType === Node.ELEMENT_NODE) syncAllNotches(n);
-            });
         }
-    });
-    observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        // NOTE: "style" intentionally omitted to break the feedback loop.
-        attributeFilter: ["data-pointer-dir", "data-theme", "class"],
-    });
-    window.__floyoStickyNotchStabilizeObserver = observer;
+        const wrappers = new Set();
+        document.querySelectorAll(".floyo-sticky-wrapper").forEach((w) => wrappers.add(w));
+        elToNode.forEach((node, el) => {
+            if (el.classList?.contains?.("floyo-sticky-wrapper")) wrappers.add(el);
+        });
+        wrappers.forEach((wrapper) => {
+            const shell = wrapper.closest(".lg-node");
+            if (!shell) return;
+            writeNotch(wrapper, shell, elToNode.get(wrapper) || null);
+        });
+    } catch (_) { /* never let notch work break the canvas */ }
 }
+
+/* NO global MutationObserver. An earlier version watched childList + "class" on
+ * the whole document (subtree) and ran syncAllNotches() on every .lg-node class
+ * change. ComfyUI churns node classes constantly during render, so on canvas
+ * load that became a tight storm of getComputedStyle()/O(n^2) work that FROZE /
+ * crashed the canvas. We rely entirely on the bounded poll below instead — and
+ * the main file's own event-driven syncOuterChrome already gives instant
+ * dir/theme response, so there is no visible lag. */
 
 /* ── Install ──────────────────────────────────────────────────────────────────
  * On every pass we (a) re-silence competitors in case a late module's top-level
@@ -295,7 +272,6 @@ function installOwnerObserver() {
  * read as flicker, and re-pins the sentinels. */
 function install() {
     silenceCompetingWriters();
-    installOwnerObserver();
     syncAllNotches();
 
     // First-paint / late-hydration salvo (covers files that load after us
@@ -309,7 +285,7 @@ function install() {
         window.__floyoStickyNotchStabilizeTimer === SENTINEL) {
         window.__floyoStickyNotchStabilizeTimer = setInterval(() => {
             silenceCompetingWriters(); // keep competitors dead if a stale module respawns
-            syncAllNotches();          // backstop the observer + track resize; idempotent via setVar()
+            syncAllNotches();          // sole bounded writer; idempotent via setVar()
         }, 750);
     }
 }
@@ -317,6 +293,7 @@ function install() {
 app.registerExtension({
     name: "Floyo.StickyNote.NotchStabilizeFix",
     async setup() {
-        install();
+        // Never let a setup error break the ComfyUI canvas.
+        try { install(); } catch (_) {}
     },
 });
