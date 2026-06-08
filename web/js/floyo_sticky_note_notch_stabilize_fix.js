@@ -191,8 +191,8 @@ function writeNotch(wrapper, shell, node) {
         const nodeHeight = node.size[1] || 240;
         ref = Math.min(nodeWidth, nodeHeight);
     }
-    const base = Math.round(clamp(ref * 0.13, 30, 50));
-    const reach = Math.round(clamp(ref * 0.075, 17, 30));
+    const base = Math.round(clamp(ref * 0.16, 36, 62));
+    const reach = Math.round(clamp(ref * 0.095, 21, 38));
 
     // --- direction: prefer the model, fall back to the wrapper dataset ---
     const dir =

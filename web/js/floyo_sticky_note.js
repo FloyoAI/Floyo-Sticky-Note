@@ -1472,8 +1472,8 @@ function setupStickyNote(node) {
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
         const [nodeWidth = 0, nodeHeight = 0] = node.size || [];
         const ref = Math.min(nodeWidth || 320, nodeHeight || 240);
-        const base = Math.round(Math.max(30, Math.min(50, ref * 0.13)));
-        const reach = Math.round(Math.max(17, Math.min(30, ref * 0.075)));
+        const base = Math.round(Math.max(36, Math.min(62, ref * 0.16)));
+        const reach = Math.round(Math.max(21, Math.min(38, ref * 0.095)));
         shell.classList.add("floyo-sticky-node-shell");
         shell.dataset.pointerDir = node.properties.pointerDir || "";
         shell.style.setProperty("--floyo-sticky-border", t.border);
