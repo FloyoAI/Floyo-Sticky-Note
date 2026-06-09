@@ -1687,17 +1687,19 @@ function setupStickyNote(node) {
         // the controls always sit on top of the image / video card and
         // are easy to find.
         const PAD = 8;
-        const toolsW = imgTools.offsetWidth || 0;
-        // bRect/eRect are viewport-relative and already account for body's own
-        // scroll, so an absolute child positioned against them must NOT also add
-        // body.scrollLeft/scrollTop — that double-counted the scroll and pushed
-        // the toolbar out of the content box, spawning a horizontal scrollbar.
-        let left = eRect.right - bRect.left - toolsW - PAD;
-        // Clamp inside the body's content box so the toolbar can never reach past
-        // an edge (no horizontal scrollbar, never "stuck" off to the left).
-        left = Math.max(PAD, Math.min(left, body.clientWidth - toolsW - PAD));
-        const top = Math.max(PAD, eRect.top - bRect.top + PAD);
-        imgTools.style.left = left + "px";
+        // Anchor from the RIGHT edge so the position NEVER depends on the
+        // toolbar's own width: imgTools.offsetWidth reads 0 on the first reveal
+        // (measured during the intro animation), which collapsed the old
+        // left-from-width math and dropped the toolbar at the top-left, where
+        // overflow:hidden clipped it to a dark sliver — the "black bar" on video.
+        // The toolbar's right edge sits PAD inside the media's right edge.
+        // Horizontal never scrolls (overflow-x is hidden) so no scrollLeft term.
+        const right = Math.max(PAD, bRect.right - eRect.right + PAD);
+        // The body scrolls VERTICALLY, and an absolute child's top is relative to
+        // the scrollable content origin, so body.scrollTop IS needed here.
+        const top = Math.max(PAD, eRect.top - bRect.top + body.scrollTop + PAD);
+        imgTools.style.left = "auto";
+        imgTools.style.right = right + "px";
         imgTools.style.top  = top + "px";
     }
     // The toolbar should follow whichever media is currently most-

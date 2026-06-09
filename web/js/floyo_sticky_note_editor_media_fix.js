@@ -65,14 +65,26 @@ const CSS = `
     max-width: calc(100% - 16px) !important;
 }
 
-/* All inserted media auto-fits the editor's text-box width (no overflow). */
-.floyo-sticky-body img,
+/* All inserted CONTENT media auto-fits the editor's text-box width (no overflow).
+   EXCLUDE .floyo-embed-thumb: it is an <img> but it must fill the 16:9 video card
+   (height:100%, object-fit:cover crops the YouTube letterbox). height:auto here
+   broke it into its natural 4:3 height, exposing the thumbnail's baked-in black
+   bar at the top of the card. */
+.floyo-sticky-body img:not(.floyo-embed-thumb),
 .floyo-sticky-body video,
-.floyo-sticky-editor img,
+.floyo-sticky-editor img:not(.floyo-embed-thumb),
 .floyo-sticky-editor video {
     max-width: 100% !important;
     height: auto !important;
     box-sizing: border-box !important;
+}
+
+/* Re-assert that the video thumbnail fills its card (defensive). */
+.floyo-sticky-body img.floyo-embed-thumb,
+.floyo-sticky-editor img.floyo-embed-thumb {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
 }
 `;
 
