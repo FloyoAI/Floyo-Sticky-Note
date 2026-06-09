@@ -45,8 +45,10 @@ const CSS = `
 
 /* The editor footer was pushed to left/right:-13px to fill the bottom chrome;
    that protruded past the (un-clippable) wrapper and caused horizontal overflow.
-   Keep its vertical fill but stop the horizontal protrusion. */
-.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer {
+   Keep its vertical fill but stop the horizontal protrusion. The main file's rule
+   is also !important at equal specificity, so double the wrapper class to win
+   regardless of stylesheet order. */
+.floyo-sticky-wrapper.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer {
     left: 0 !important;
     right: 0 !important;
 }
