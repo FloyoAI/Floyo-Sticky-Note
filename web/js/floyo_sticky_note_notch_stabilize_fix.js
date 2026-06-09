@@ -218,7 +218,9 @@ function writeNotch(wrapper, shell, node) {
     // fill matches floyo_sticky_note.js:1421 exactly: header for "up", body bg
     // otherwise. header/bg always resolve truthy via the theme fallback, so there
     // is no header<->bg ping-pong like the empty-prone computed-only branches.
-    const fill = dir === "up" ? header : bg;
+    // up/down notches sit on the title bar / bottom bar (header colour); left and
+    // right sit on the body (bg). Matching that makes the notch blend seamlessly.
+    const fill = (dir === "up" || dir === "down") ? header : bg;
 
     // --- write (CSS vars + data-pointer-dir only; never title / properties) ---
     shell.classList.add("floyo-sticky-node-shell");

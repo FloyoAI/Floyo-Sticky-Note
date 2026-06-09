@@ -344,7 +344,7 @@ const STYLES = `
 .floyo-sticky-node-shell[data-pointer-dir="up"]::after {
     display: block;
     width: var(--floyo-notch-inner-base);
-    height: var(--floyo-notch-inner-reach);
+    height: calc(var(--floyo-notch-inner-reach) + 3px);
     left: 50%;
     top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     transform: translateX(-50%);
@@ -362,7 +362,7 @@ const STYLES = `
 .floyo-sticky-node-shell[data-pointer-dir="down"]::after {
     display: block;
     width: var(--floyo-notch-inner-base);
-    height: var(--floyo-notch-inner-reach);
+    height: calc(var(--floyo-notch-inner-reach) + 3px);
     left: 50%;
     bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     transform: translateX(-50%);
@@ -379,7 +379,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell[data-pointer-dir="left"]::after {
     display: block;
-    width: var(--floyo-notch-inner-reach);
+    width: calc(var(--floyo-notch-inner-reach) + 3px);
     height: var(--floyo-notch-inner-base);
     left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     top: 50%;
@@ -397,7 +397,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell[data-pointer-dir="right"]::after {
     display: block;
-    width: var(--floyo-notch-inner-reach);
+    width: calc(var(--floyo-notch-inner-reach) + 3px);
     height: var(--floyo-notch-inner-base);
     right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     top: 50%;
@@ -438,7 +438,7 @@ const STYLES = `
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="up"]::after {
     display: block !important;
     width: var(--floyo-notch-inner-base) !important;
-    height: var(--floyo-notch-inner-reach) !important;
+    height: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     left: 50% !important;
     top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     transform: translateX(-50%) !important;
@@ -456,7 +456,7 @@ const STYLES = `
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="down"]::after {
     display: block !important;
     width: var(--floyo-notch-inner-base) !important;
-    height: var(--floyo-notch-inner-reach) !important;
+    height: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     left: 50% !important;
     bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     transform: translateX(-50%) !important;
@@ -473,7 +473,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="left"]::after {
     display: block !important;
-    width: var(--floyo-notch-inner-reach) !important;
+    width: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     height: var(--floyo-notch-inner-base) !important;
     left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     top: 50% !important;
@@ -491,7 +491,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="right"]::after {
     display: block !important;
-    width: var(--floyo-notch-inner-reach) !important;
+    width: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     height: var(--floyo-notch-inner-base) !important;
     right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     top: 50% !important;
@@ -1478,7 +1478,7 @@ function setupStickyNote(node) {
         shell.dataset.pointerDir = node.properties.pointerDir || "";
         shell.style.setProperty("--floyo-sticky-border", t.border);
         shell.style.setProperty("--floyo-sticky-bg", t.bg);
-        shell.style.setProperty("--floyo-sticky-notch-fill", node.properties.pointerDir === "up" ? t.header : t.bg);
+        shell.style.setProperty("--floyo-sticky-notch-fill", (node.properties.pointerDir === "up" || node.properties.pointerDir === "down") ? t.header : t.bg);
         shell.style.setProperty("--floyo-notch-base", `${base}px`);
         shell.style.setProperty("--floyo-notch-reach", `${reach}px`);
         shell.style.setProperty("--floyo-notch-inner-base", `${Math.max(1, base - 1)}px`);
