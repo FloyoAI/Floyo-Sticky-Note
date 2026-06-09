@@ -655,76 +655,51 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
 
-/* Right cluster in display mode: edit pencil + resize grip, bottom-right. */
-.floyo-display-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    pointer-events: none;
-}
-/* Floyo wordmark shown at the bottom-left in display mode — mirrors the
-   editor-footer logo (just slightly smaller). Clickable → floyo.ai. */
-.floyo-display-logo {
-    height: 16px;
-    width: auto;
-    flex: 0 0 auto;
-    pointer-events: all;
-    cursor: pointer;
-    user-select: none;
-    opacity: 0.9;
-    transition: opacity 120ms ease;
-}
-.floyo-display-logo:hover { opacity: 1; }
+/* (Display-mode logo + right-cluster wrapper removed — the Figma 902-277
+   design has no logo; the bottom shows just an edit pencil on the left and a
+   resize grip on the right, directly on the body, with no bar.) */
 
-/* Display-mode bottom bar — a full-width strip that MIRRORS ComfyUI's top title
-   bar: it spans the node's left/right edges, fills the empty footer chrome strip
-   at the very bottom of the node (below the body text), and has the same height,
-   theme colour, and rounded bottom corners as the title bar.
-   The negative left/right/bottom reach PAST our DOM widget into the node's fixed
-   chrome: the widget is inset about 14px on each side and sits about 37px above
-   the node's bottom edge. These are fixed ComfyUI local-px values (zoom
-   independent), measured live on jacob.
+/* Display-mode bottom affordances (Figma 902-277): NO bar, NO logo — just the
+   edit pencil pinned bottom-left and the resize grip bottom-right, sitting
+   directly on the body. The wrapper covers the node's fixed footer chrome (the
+   ~37px strip below our DOM widget) but is kept TRANSPARENT, so the node's own
+   background colour shows through and the body reads as one seamless panel down
+   to the rounded bottom corners — mirroring how the top title bar has no border.
+   The negative left/right/bottom reach past the DOM widget into that chrome
+   (fixed ComfyUI local-px values, zoom independent).
    !important: a fix file (visual_compat) sets bottom -2px as !important, so a
-   plain rule cannot win; !important plus this rule's higher specificity makes
-   ours win. */
+   plain rule cannot win; !important plus this rule's higher specificity wins. */
 .floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
     left: -13px !important;
     right: -13px !important;
     bottom: -37px !important;
     min-height: 37px !important;
-    padding: 0 14px;
-    gap: 8px;
+    padding: 0 12px 9px;
     box-sizing: border-box;
-    background: var(--header);
-    border-top: none;
-    border-radius: 0 0 16px 16px;
+    align-items: flex-end;
+    background: transparent;
 }
 
-/* Edit button — pixel-art pencil on a black "box" background, per
-   Matt's Figma 930-4896. Square card, slight rounding, black fill so
-   the pencil reads on every theme colour. */
+/* Edit button — a bare pixel-art pencil (no box), per Figma 902-277. It sits
+   directly on the body at the bottom-left in a muted tint (the white pencil at
+   low opacity reads on every theme colour) and brightens on hover. */
 .floyo-display-edit {
-    width: 20px;
-    height: 20px;
-    background: #000;
+    width: 16px;
+    height: 16px;
+    background: transparent;
     border: none;
-    border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     pointer-events: all;
     padding: 0;
-    transition: transform 120ms ease, box-shadow 120ms ease;
+    opacity: 0.5;
+    transition: opacity 120ms ease;
 }
-.floyo-display-edit:hover {
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35);
-    transform: scale(1.05);
-}
-.floyo-display-edit:active { transform: scale(0.96); }
-/* The pencil SVG is rendered with fill=white inline so it shows up on
-   the black background regardless of theme. */
-.floyo-display-edit svg { display: block; }
+.floyo-display-edit:hover { opacity: 0.85; }
+.floyo-display-edit:active { opacity: 1; }
+.floyo-display-edit svg { display: block; width: 13px; height: 13px; }
 
 /* Resize-grip — two subtle diagonal lines at the true bottom-right
    corner, exactly the SVG Matt provided. It also handles pointer-drag
@@ -737,7 +712,7 @@ const STYLES = `
     justify-content: flex-end;
     pointer-events: all;
     cursor: nwse-resize;
-    opacity: 0.3;
+    opacity: 0.45;
     padding: 0;
     touch-action: none;
 }
@@ -1528,12 +1503,10 @@ function setupStickyNote(node) {
     // Both are hidden once the user enters editor mode.
     const displayActions = document.createElement("div");
     displayActions.className = "floyo-display-actions";
-    // Edit pencil + resize-grip use Matt's Figma affordances: pixel-art
-    // pencil (12×12 black-fill) and a tiny three-line resize mark. The
-    // pencil's `fill="#fff"` overrides the original black so it reads on
-    // the new black button background.
+    // Edit pencil (bottom-left) + three-line resize grip (bottom-right), per
+    // Figma 902-277 — both are bare icons on the body (no box, no logo, no bar).
+    // The pencil's inline white fill is muted to a low opacity via CSS.
     displayActions.innerHTML = `
-        <div class="floyo-display-right">
         <button type="button" class="floyo-display-edit" title="Edit">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
@@ -1546,25 +1519,7 @@ function setupStickyNote(node) {
                 <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
             </svg>
         </div>
-        </div>
     `;
-
-    // Floyo wordmark, bottom-left in DISPLAY mode (mirrors the editor footer
-    // logo). The editor footer is hidden in display mode, so without this the
-    // bottom-left was blank once the user saved/closed the editor.
-    const displayLogo = document.createElement("img");
-    displayLogo.className = "floyo-display-logo";
-    displayLogo.src = FLOYO_LOGO();
-    displayLogo.alt = "Floyo";
-    displayLogo.draggable = false;
-    displayLogo.title = "Open Floyo";
-    displayLogo.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
-    displayLogo.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open("https://www.floyo.ai", "_blank", "noopener,noreferrer");
-    });
-    displayActions.prepend(displayLogo);
 
     body.append(display, editor, imgTools);
 
