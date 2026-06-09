@@ -344,7 +344,7 @@ const STYLES = `
 .floyo-sticky-node-shell[data-pointer-dir="up"]::after {
     display: block;
     width: var(--floyo-notch-inner-base);
-    height: var(--floyo-notch-inner-reach);
+    height: calc(var(--floyo-notch-inner-reach) + 3px);
     left: 50%;
     top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     transform: translateX(-50%);
@@ -362,7 +362,7 @@ const STYLES = `
 .floyo-sticky-node-shell[data-pointer-dir="down"]::after {
     display: block;
     width: var(--floyo-notch-inner-base);
-    height: var(--floyo-notch-inner-reach);
+    height: calc(var(--floyo-notch-inner-reach) + 3px);
     left: 50%;
     bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     transform: translateX(-50%);
@@ -379,7 +379,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell[data-pointer-dir="left"]::after {
     display: block;
-    width: var(--floyo-notch-inner-reach);
+    width: calc(var(--floyo-notch-inner-reach) + 3px);
     height: var(--floyo-notch-inner-base);
     left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     top: 50%;
@@ -397,7 +397,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell[data-pointer-dir="right"]::after {
     display: block;
-    width: var(--floyo-notch-inner-reach);
+    width: calc(var(--floyo-notch-inner-reach) + 3px);
     height: var(--floyo-notch-inner-base);
     right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px);
     top: 50%;
@@ -438,7 +438,7 @@ const STYLES = `
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="up"]::after {
     display: block !important;
     width: var(--floyo-notch-inner-base) !important;
-    height: var(--floyo-notch-inner-reach) !important;
+    height: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     left: 50% !important;
     top: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     transform: translateX(-50%) !important;
@@ -456,7 +456,7 @@ const STYLES = `
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="down"]::after {
     display: block !important;
     width: var(--floyo-notch-inner-base) !important;
-    height: var(--floyo-notch-inner-reach) !important;
+    height: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     left: 50% !important;
     bottom: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     transform: translateX(-50%) !important;
@@ -473,7 +473,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="left"]::after {
     display: block !important;
-    width: var(--floyo-notch-inner-reach) !important;
+    width: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     height: var(--floyo-notch-inner-base) !important;
     left: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     top: 50% !important;
@@ -491,7 +491,7 @@ const STYLES = `
 }
 .floyo-sticky-node-shell.floyo-sticky-node-shell.floyo-sticky-node-shell[data-pointer-dir="right"]::after {
     display: block !important;
-    width: var(--floyo-notch-inner-reach) !important;
+    width: calc(var(--floyo-notch-inner-reach) + 3px) !important;
     height: var(--floyo-notch-inner-base) !important;
     right: calc(-1 * var(--floyo-notch-inner-reach) + 0.5px) !important;
     top: 50% !important;
@@ -590,10 +590,12 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="display"] .floyo-sticky-body {
     padding-top: 10px;
-    padding-bottom: 14px;
+    padding-bottom: 10px;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
-    padding-bottom: 46px;
+    /* small: the editor footer now sits in the node's bottom chrome (below the
+       widget), not over the body, so the editor uses the full widget height. */
+    padding-bottom: 10px;
 }
 .floyo-sticky-display, .floyo-sticky-editor {
     outline: none;
@@ -653,31 +655,51 @@ const STYLES = `
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-display-actions { display: none; }
 
-/* Edit button — pixel-art pencil on a black "box" background, per
-   Matt's Figma 930-4896. Square card, slight rounding, black fill so
-   the pencil reads on every theme colour. */
+/* (Display-mode logo + right-cluster wrapper removed — the Figma 902-277
+   design has no logo; the bottom shows just an edit pencil on the left and a
+   resize grip on the right, directly on the body, with no bar.) */
+
+/* Display-mode bottom affordances (Figma 902-277): NO bar, NO logo — just the
+   edit pencil pinned bottom-left and the resize grip bottom-right, sitting
+   directly on the body. The wrapper covers the node's fixed footer chrome (the
+   ~37px strip below our DOM widget) but is kept TRANSPARENT, so the node's own
+   background colour shows through and the body reads as one seamless panel down
+   to the rounded bottom corners — mirroring how the top title bar has no border.
+   The negative left/right/bottom reach past the DOM widget into that chrome
+   (fixed ComfyUI local-px values, zoom independent).
+   !important: a fix file (visual_compat) sets bottom -2px as !important, so a
+   plain rule cannot win; !important plus this rule's higher specificity wins. */
+.floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
+    left: -13px !important;
+    right: -13px !important;
+    bottom: -37px !important;
+    min-height: 37px !important;
+    padding: 0 12px 9px;
+    box-sizing: border-box;
+    align-items: flex-end;
+    background: transparent;
+}
+
+/* Edit button — a bare pixel-art pencil (no box), per Figma 902-277. It sits
+   directly on the body at the bottom-left in a muted tint (the white pencil at
+   low opacity reads on every theme colour) and brightens on hover. */
 .floyo-display-edit {
-    width: 20px;
-    height: 20px;
-    background: #000;
+    width: 16px;
+    height: 16px;
+    background: transparent;
     border: none;
-    border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     pointer-events: all;
     padding: 0;
-    transition: transform 120ms ease, box-shadow 120ms ease;
+    opacity: 0.5;
+    transition: opacity 120ms ease;
 }
-.floyo-display-edit:hover {
-    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.35);
-    transform: scale(1.05);
-}
-.floyo-display-edit:active { transform: scale(0.96); }
-/* The pencil SVG is rendered with fill=white inline so it shows up on
-   the black background regardless of theme. */
-.floyo-display-edit svg { display: block; }
+.floyo-display-edit:hover { opacity: 0.85; }
+.floyo-display-edit:active { opacity: 1; }
+.floyo-display-edit svg { display: block; width: 13px; height: 13px; }
 
 /* Resize-grip — two subtle diagonal lines at the true bottom-right
    corner, exactly the SVG Matt provided. It also handles pointer-drag
@@ -690,7 +712,7 @@ const STYLES = `
     justify-content: flex-end;
     pointer-events: all;
     cursor: nwse-resize;
-    opacity: 0.3;
+    opacity: 0.45;
     padding: 0;
     touch-action: none;
 }
@@ -1023,6 +1045,19 @@ const STYLES = `
     overflow: hidden;
 }
 .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer { display: flex; }
+
+/* Editor footer — same treatment as the display-mode bottom bar: drop it into
+   the node's empty bottom chrome so it spans the node edges and reaches the
+   bottom edge with no gap below. Fixed ComfyUI local-px offsets: the widget is
+   inset about 13px each side and sits about 37px above the node bottom; rounded
+   bottom corners match the node. */
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer {
+    left: -13px !important;
+    right: -13px !important;
+    bottom: -37px !important;
+    min-height: 37px !important;
+    border-radius: 0 0 16px 16px;
+}
 
 /* Floyo full-wordmark logo on the bottom-left.
    Per Ashna + Matt's Slack agreement ("Full logo is better - smaller?" /
@@ -1412,13 +1447,13 @@ function setupStickyNote(node) {
         const t = THEMES[node.properties.theme] || THEMES[DEFAULT_THEME];
         const [nodeWidth = 0, nodeHeight = 0] = node.size || [];
         const ref = Math.min(nodeWidth || 320, nodeHeight || 240);
-        const base = Math.round(Math.max(30, Math.min(50, ref * 0.13)));
-        const reach = Math.round(Math.max(17, Math.min(30, ref * 0.075)));
+        const base = Math.round(Math.max(36, Math.min(62, ref * 0.16)));
+        const reach = Math.round(Math.max(21, Math.min(38, ref * 0.095)));
         shell.classList.add("floyo-sticky-node-shell");
         shell.dataset.pointerDir = node.properties.pointerDir || "";
         shell.style.setProperty("--floyo-sticky-border", t.border);
         shell.style.setProperty("--floyo-sticky-bg", t.bg);
-        shell.style.setProperty("--floyo-sticky-notch-fill", node.properties.pointerDir === "up" ? t.header : t.bg);
+        shell.style.setProperty("--floyo-sticky-notch-fill", (node.properties.pointerDir === "up" || node.properties.pointerDir === "down") ? t.header : t.bg);
         shell.style.setProperty("--floyo-notch-base", `${base}px`);
         shell.style.setProperty("--floyo-notch-reach", `${reach}px`);
         shell.style.setProperty("--floyo-notch-inner-base", `${Math.max(1, base - 1)}px`);
@@ -1468,10 +1503,9 @@ function setupStickyNote(node) {
     // Both are hidden once the user enters editor mode.
     const displayActions = document.createElement("div");
     displayActions.className = "floyo-display-actions";
-    // Edit pencil + resize-grip use Matt's Figma affordances: pixel-art
-    // pencil (12×12 black-fill) and a tiny three-line resize mark. The
-    // pencil's `fill="#fff"` overrides the original black so it reads on
-    // the new black button background.
+    // Edit pencil (bottom-left) + three-line resize grip (bottom-right), per
+    // Figma 902-277 — both are bare icons on the body (no box, no logo, no bar).
+    // The pencil's inline white fill is muted to a low opacity via CSS.
     displayActions.innerHTML = `
         <button type="button" class="floyo-display-edit" title="Edit">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -1653,8 +1687,20 @@ function setupStickyNote(node) {
         // the controls always sit on top of the image / video card and
         // are easy to find.
         const PAD = 8;
-        imgTools.style.left = (eRect.right - bRect.left - imgTools.offsetWidth - PAD + body.scrollLeft) + "px";
-        imgTools.style.top  = (eRect.top   - bRect.top  + PAD + body.scrollTop) + "px";
+        // Anchor from the RIGHT edge so the position NEVER depends on the
+        // toolbar's own width: imgTools.offsetWidth reads 0 on the first reveal
+        // (measured during the intro animation), which collapsed the old
+        // left-from-width math and dropped the toolbar at the top-left, where
+        // overflow:hidden clipped it to a dark sliver — the "black bar" on video.
+        // The toolbar's right edge sits PAD inside the media's right edge.
+        // Horizontal never scrolls (overflow-x is hidden) so no scrollLeft term.
+        const right = Math.max(PAD, bRect.right - eRect.right + PAD);
+        // The body scrolls VERTICALLY, and an absolute child's top is relative to
+        // the scrollable content origin, so body.scrollTop IS needed here.
+        const top = Math.max(PAD, eRect.top - bRect.top + body.scrollTop + PAD);
+        imgTools.style.left = "auto";
+        imgTools.style.right = right + "px";
+        imgTools.style.top  = top + "px";
     }
     // The toolbar should follow whichever media is currently most-
     // relevant: HOVER beats SELECTION, because the user is mousing
@@ -2461,7 +2507,14 @@ function wireToolbar(toolbar, editor, onChange) {
                 return null;
             })();
             const restoreSelection = () => {
-                editor.focus();
+                // Keep the user exactly where they were when they opened the modal.
+                // A plain editor.focus() scrolls the note to the now-collapsed
+                // selection — i.e. the TOP — before we restore the saved range, so
+                // the view jumps up. focus({preventScroll}) avoids that, and we also
+                // pin the scroll position explicitly as a safeguard.
+                const scroller = editor.closest(".floyo-sticky-body");
+                const savedScroll = scroller ? scroller.scrollTop : 0;
+                editor.focus({ preventScroll: true });
                 if (savedRange) {
                     const s = window.getSelection();
                     s.removeAllRanges();
@@ -2469,6 +2522,7 @@ function wireToolbar(toolbar, editor, onChange) {
                 } else {
                     placeCaretAtEnd(editor);
                 }
+                if (scroller) scroller.scrollTop = savedScroll;
             };
 
             if (cmd === "insertImageURL") {
