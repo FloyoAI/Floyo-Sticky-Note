@@ -2507,7 +2507,14 @@ function wireToolbar(toolbar, editor, onChange) {
                 return null;
             })();
             const restoreSelection = () => {
-                editor.focus();
+                // Keep the user exactly where they were when they opened the modal.
+                // A plain editor.focus() scrolls the note to the now-collapsed
+                // selection — i.e. the TOP — before we restore the saved range, so
+                // the view jumps up. focus({preventScroll}) avoids that, and we also
+                // pin the scroll position explicitly as a safeguard.
+                const scroller = editor.closest(".floyo-sticky-body");
+                const savedScroll = scroller ? scroller.scrollTop : 0;
+                editor.focus({ preventScroll: true });
                 if (savedRange) {
                     const s = window.getSelection();
                     s.removeAllRanges();
@@ -2515,6 +2522,7 @@ function wireToolbar(toolbar, editor, onChange) {
                 } else {
                     placeCaretAtEnd(editor);
                 }
+                if (scroller) scroller.scrollTop = savedScroll;
             };
 
             if (cmd === "insertImageURL") {
