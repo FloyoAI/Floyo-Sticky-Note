@@ -1687,8 +1687,18 @@ function setupStickyNote(node) {
         // the controls always sit on top of the image / video card and
         // are easy to find.
         const PAD = 8;
-        imgTools.style.left = (eRect.right - bRect.left - imgTools.offsetWidth - PAD + body.scrollLeft) + "px";
-        imgTools.style.top  = (eRect.top   - bRect.top  + PAD + body.scrollTop) + "px";
+        const toolsW = imgTools.offsetWidth || 0;
+        // bRect/eRect are viewport-relative and already account for body's own
+        // scroll, so an absolute child positioned against them must NOT also add
+        // body.scrollLeft/scrollTop — that double-counted the scroll and pushed
+        // the toolbar out of the content box, spawning a horizontal scrollbar.
+        let left = eRect.right - bRect.left - toolsW - PAD;
+        // Clamp inside the body's content box so the toolbar can never reach past
+        // an edge (no horizontal scrollbar, never "stuck" off to the left).
+        left = Math.max(PAD, Math.min(left, body.clientWidth - toolsW - PAD));
+        const top = Math.max(PAD, eRect.top - bRect.top + PAD);
+        imgTools.style.left = left + "px";
+        imgTools.style.top  = top + "px";
     }
     // The toolbar should follow whichever media is currently most-
     // relevant: HOVER beats SELECTION, because the user is mousing
