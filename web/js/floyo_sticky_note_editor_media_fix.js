@@ -43,14 +43,21 @@ const CSS = `
     box-sizing: border-box !important;
 }
 
-/* The editor footer was pushed to left/right:-13px to fill the bottom chrome;
-   that protruded past the (un-clippable) wrapper and caused horizontal overflow.
-   Keep its vertical fill but stop the horizontal protrusion. The main file's rule
-   is also !important at equal specificity, so double the wrapper class to win
-   regardless of stylesheet order. */
+/* The editor toolbar AND footer span the FULL node width (to the edges, like the
+   title bar): both reach -13px into the node chrome on each side. An earlier fix
+   set the footer to left/right:0, which left an awkward inset gap (and the narrow
+   toolbar wrapped to two rows). The REAL horizontal-scrollbar fix is
+   overflow-x:hidden on the body (above), so these bars can stay full-width with
+   NO scrollbar — verified even with a full-width selected media. Double the
+   wrapper class so the footer beats the main file's equal-specificity !important
+   rule regardless of stylesheet order. */
 .floyo-sticky-wrapper.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer {
-    left: 0 !important;
-    right: 0 !important;
+    left: -13px !important;
+    right: -13px !important;
+}
+.floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-toolbar {
+    margin-left: -13px !important;
+    margin-right: -13px !important;
 }
 
 /* Selection ring drawn INSIDE the media so it can't paint past the right edge. */
