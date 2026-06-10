@@ -204,58 +204,42 @@ function isUserNativeTitle(value) {
 // headings, bold, italic, underline, strikethrough, inline code, code
 // blocks, and bullet + numbered lists.
 const DEFAULT_CONTENT = `<h1>📝 Floyo Sticky Note</h1>
-<p>This is a <b>canvas-only documentation node</b> built for the <i>Floyo workflow library</i> on top of ComfyUI. Use it to <u>annotate</u> and <b>describe parts of your workflow</b> right next to the nodes they explain — no need to leave the canvas.</p>
+<p>A canvas note that <b>documents</b> your <i>workflow</i> — every point below <u>uses</u> the feature it names. Double-click to edit.</p>
 
-<h2>✨ What you can do here</h2>
-<p>Every common rich-text feature you'd expect from a real editor — all wired up to <code>document.execCommand</code> for that battle-tested browser support:</p>
+<h2>✏️ Text</h2>
 <ul>
-<li><b>Bold</b>, <i>italic</i>, <u>underline</u>, and <s>strikethrough</s> for emphasis.</li>
-<li><b>Three heading levels</b> — H₁ for titles, H₂ for sections, H₃ for sub-sections.</li>
-<li>Inline <code>code</code> spans and full code blocks (try the <b>&lt;/&gt;</b> button).</li>
-<li>Both <b>bullet</b> and <b>numbered</b> lists, with proper nesting.</li>
-<li>Drop in <b>images</b> and <b>YouTube</b> / <b>Vimeo</b> videos via URL — they render as clickable preview cards.</li>
+<li><b>H₁</b>, <b>H₂</b>, <b>H₃</b> headings, plus plain paragraphs for the rest.</li>
+<li><span style="font-size:13px">A−</span> and <span style="font-size:20px">A+</span> shrink or grow the selected text.</li>
+<li><b>Bold</b>, <i>italic</i>, <u>underline</u>, <s>strikethrough</s>.</li>
+<li><b>Tₓ</b> clears all formatting from a selection.</li>
+<li>The <b>&lt;/&gt;</b> button makes a code block:</li>
 </ul>
+<pre>steps: 20
+cfg: 7.5
+sampler: euler</pre>
 
-<h2>🎨 Theming</h2>
-<p>Pick from three Floyo-branded themes via the footer swatches:</p>
+<h2>📋 Lists, media &amp; links</h2>
+<ul>
+<li>Bullet list (this one).</li>
+</ul>
 <ol>
-<li><b>Purple</b> — the default, calm and neutral.</li>
-<li><b>Blue</b> — perfect for "info" or "reference" notes.</li>
-<li><b>Green</b> — pair with completed sections or "best practice" callouts.</li>
+<li>Numbered list (this one).</li>
 </ol>
-<p>The theme swap is <u>instant</u> and the colour syncs across the title bar, body, accent text, code blocks, and the directional notch.</p>
-
-<h3>About the font</h3>
-<p>The title bar uses the <b>ArcadePixelNeue</b> font for a bit of Floyo brand character. The body uses your system stack by default but you can pick <b>Roboto</b>, <b>Arcade</b>, or <b>Janeiro</b> from the footer dropdown.</p>
-
-<h2>🧭 Pointing at things</h2>
-<p>The 4-arrow compass in the footer projects a <b>matching-colour notch</b> out of any edge of the node — so when a sticky is sitting between a bunch of other nodes, a reader can tell exactly <i>which</i> node it's annotating. Click an arrow once to add the notch, click it again to clear.</p>
-
-<h3>Pro tips</h3>
 <ul>
-<li><b>Double-click</b> the body to enter editor mode. Double-click again outside, or click the green ✓, to save and exit.</li>
-<li><b>Double-click the title bar</b> to rename the note.</li>
-<li>Inside a code block, <b>press Enter on an empty line</b> (or hit Arrow-Down at the bottom) to escape back to a paragraph — same UX as Slack and Notion.</li>
-<li>To delete a video or image, <b>hover over it</b> and a small floating toolbar appears with <b>−</b> / <b>+</b> / <b>× Remove</b> controls.</li>
+<li>Insert an <b>image</b> by pasting its URL.</li>
+<li>Embed a <b>YouTube</b> or <b>Vimeo</b> video by URL.</li>
+<li>Select text, then turn it into a <a href="https://www.floyo.ai">link</a>.</li>
+<li>Add a divider line with the divider button:</li>
 </ul>
+<hr class="floyo-divider" />
 
-<h2>⚙️ Under the hood</h2>
-<p>The node is a custom ComfyUI extension that lives in <code>web/js/floyo_sticky_note.js</code>. It registers as a LiteGraph node with <s>no inputs</s> and <s>no outputs</s> — so it's <u>skipped by the prompt queue at run time</u> and exists purely as a documentation artifact on the canvas.</p>
-
-<pre><code>// The Python side is just registration boilerplate
-class FloyoStickyNote:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {}}
-    RETURN_TYPES = ()
-    FUNCTION = "noop"
-    CATEGORY = "Floyo/Notes"
-    def noop(self):
-        return ()</code></pre>
-
-<h2>📌 Final note</h2>
-<p>This sticky note is built for the <b>top 50 Floyo workflows</b> conversion project — every shipped workflow should have a couple of these placed next to its key nodes to walk the user through what's happening.</p>
-<p>Happy documenting! ✍️</p>`;
+<h2>🎨 Look &amp; controls</h2>
+<ul>
+<li><b>Themes</b> via the footer swatches: <b>Purple</b>, <b>Blue</b>, <b>Green</b>, <b>Grey</b>, <b>Raspberry</b>.</li>
+<li>The footer <b>compass</b> points a matching-colour notch out of any edge toward the node you're describing — click an arrow again to clear it.</li>
+<li><b>Edit:</b> double-click the body, or use the pencil at bottom-right. <b>Save:</b> click the green ✓ or click outside.</li>
+<li><b>Rename:</b> double-click the title bar. <b>Resize:</b> drag the bottom-right grip.</li>
+</ul>`;
 
 /* ─── Inject styles + Google Fonts (once) ─────────────────────────────── */
 
