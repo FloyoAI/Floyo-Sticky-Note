@@ -151,6 +151,19 @@ const THEMES = {
         codeBg:     "#171717",
         swatch:     "#737373",
     },
+    raspberry: {                           // Raspberry — deep wine fill, pink accent
+        bg:         "#4A1234",             // fill — dark raspberry/wine
+        bgGradient: "linear-gradient(180deg, #4A1234 0%, #43102E 100%)",
+        header:     "#3A0E28",
+        headerHover:"#8C1F57",
+        toolbar:    "#3A0E28",
+        text:       "#FCE7F3",
+        textMuted:  "#F9A8D4",
+        accent:     "#F472B6",
+        border:     "#8C1F57",             // outline — medium raspberry
+        codeBg:     "#2E0A1F",
+        swatch:     "#EC4899",             // bright raspberry-pink swatch dot
+    },
 };
 
 const DEFAULT_THEME = "purple";
@@ -521,6 +534,13 @@ const STYLES = `
     --text-mute:${THEMES.grey.textMuted}; --accent:${THEMES.grey.accent};
     --border:${THEMES.grey.border}; --code-bg:${THEMES.grey.codeBg};
 }
+.floyo-sticky-wrapper[data-theme="raspberry"] {
+    --bg:${THEMES.raspberry.bg}; --bg-grad:${THEMES.raspberry.bgGradient};
+    --header:${THEMES.raspberry.header}; --hover:${THEMES.raspberry.headerHover};
+    --toolbar:${THEMES.raspberry.toolbar}; --text:${THEMES.raspberry.text};
+    --text-mute:${THEMES.raspberry.textMuted}; --accent:${THEMES.raspberry.accent};
+    --border:${THEMES.raspberry.border}; --code-bg:${THEMES.raspberry.codeBg};
+}
 
 /* ── Toolbar (editor mode only) ── */
 .floyo-sticky-toolbar {
@@ -721,6 +741,34 @@ const STYLES = `
     width: 13px;
     height: 13px;
     transform: translate(0, 0);
+}
+
+/* Display-mode Floyo wordmark — bottom-LEFT, the SAME logo as the editor footer,
+   sitting directly on the body (no bar behind it). Sized to the slim display
+   strip. Clickable (opens Floyo); the JS swallows mousedown so it never starts a
+   canvas drag or marquee-select. */
+.floyo-display-brand {
+    height: 16px;
+    width: auto;
+    flex: 0 0 auto;
+    align-self: flex-end;
+    user-select: none;
+    pointer-events: all;
+    cursor: pointer;
+    opacity: 0.95;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+
+/* Right cluster — the Edit pencil packed next to the resize grip at the
+   bottom-RIGHT. flex:0 0 auto so it keeps its natural width and the parent's
+   space-between drops it on the right, opposite the logo. The wrapper is
+   click-through; only the pencil + grip inside it take pointer events. */
+.floyo-display-tools {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+    pointer-events: none;
 }
 
 /* Rich-text styles inside body */
@@ -1131,6 +1179,7 @@ const STYLES = `
 .floyo-swatch.swatch-blue   { background: ${THEMES.blue.swatch}; }
 .floyo-swatch.swatch-green  { background: ${THEMES.green.swatch}; }
 .floyo-swatch.swatch-grey   { background: ${THEMES.grey.swatch}; }
+.floyo-swatch.swatch-raspberry { background: ${THEMES.raspberry.swatch}; }
 
 /* Save button — Matt's Figma 970-485 spec.
    Background: Mint/Mint 4 #3CE195 (the same green as the pixel-art
@@ -1503,23 +1552,42 @@ function setupStickyNote(node) {
     // Both are hidden once the user enters editor mode.
     const displayActions = document.createElement("div");
     displayActions.className = "floyo-display-actions";
-    // Edit pencil (bottom-left) + three-line resize grip (bottom-right), per
-    // Figma 902-277 — both are bare icons on the body (no box, no logo, no bar).
-    // The pencil's inline white fill is muted to a low opacity via CSS.
+    // Display-mode bottom (per request): the Floyo wordmark pinned bottom-LEFT
+    // (the SAME logo as the editor footer — no bar behind it) and, on the RIGHT,
+    // the Edit pencil sitting next to the resize grip. The save/check button and
+    // the colour palette stay EDITOR-only, so display mode shows just: logo |
+    // edit + grip, directly on the body. Both icons are bare (no box); the
+    // pencil's white fill is muted via CSS. New class names
+    // (.floyo-display-brand / .floyo-display-tools) intentionally sidestep the
+    // older figma-bottom-fix rules that hid the logo / spread the right cluster.
     displayActions.innerHTML = `
-        <button type="button" class="floyo-display-edit" title="Edit">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
-            </svg>
-        </button>
-        <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
-                <line x1="12" y1="7" x2="7" y2="12" stroke="white" stroke-linecap="round"/>
-                <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
-            </svg>
+        <img class="floyo-display-brand" src="${FLOYO_LOGO()}" alt="Floyo" draggable="false" title="Open Floyo">
+        <div class="floyo-display-tools">
+            <button type="button" class="floyo-display-edit" title="Edit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
+                </svg>
+            </button>
+            <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
+                    <line x1="12" y1="7" x2="7" y2="12" stroke="white" stroke-linecap="round"/>
+                    <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
+                </svg>
+            </div>
         </div>
     `;
+    // Wire the bottom-left wordmark: open Floyo, and swallow mousedown so a click
+    // on the logo never starts a LiteGraph node-drag / marquee select.
+    const displayBrand = displayActions.querySelector(".floyo-display-brand");
+    if (displayBrand) {
+        displayBrand.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+        displayBrand.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open("https://www.floyo.ai", "_blank", "noopener,noreferrer");
+        });
+    }
 
     body.append(display, editor, imgTools);
 
@@ -2643,7 +2711,7 @@ function createFooter() {
 
     const swatches = document.createElement("div");
     swatches.className = "floyo-footer-swatches";
-    ["purple", "blue", "green", "grey"].forEach((t) => {
+    ["purple", "blue", "green", "grey", "raspberry"].forEach((t) => {
         const sw = document.createElement("button");
         sw.type = "button";
         sw.className = `floyo-swatch swatch-${t}`;
