@@ -10,15 +10,16 @@
  *     name). On the sticky note our edit pencil sits on top of it, so it reads
  *     as a black box behind the pencil — and in editor mode the pill shows as a
  *     stray dark blob under the footer.
- *   • The chrome geometry changed: the DOM widget is inset 6px per side (was
- *     13px) and the bottom chrome strip is 21px (was 37px). Our bars positioned
- *     with the old numbers either overshoot or leave a visible gap.
+ *   • The chrome geometry changed: the side inset is still 13px, but the bottom
+ *     chrome strip is now 21px (was 37px). Bars positioned with the old bottom
+ *     value overshoot and leave a visible gap.
  *
  * FIX (CSS only — no observers, no timers, no DOM mutation):
  *   • Hide the package badge pill inside sticky notes only (other nodes keep
  *     theirs; a sticky note never needs a package badge).
  *   • Re-pin the display icons / editor footer / editor toolbar with the new
- *     frontend's measured geometry (inset 6px, bottom gap 21px — measured live).
+ *     frontend's measured geometry (sides -13px, bottom -21px — measured live;
+ *     verified flush at 0px on all edges in both modes).
  *
  * Every geometry rule is GATED on the badge pill existing inside the node shell
  * (:has(...)): the pill only exists on the NEW frontend, so on the old frontend
@@ -43,8 +44,8 @@ const CSS = `
 
 /* ── Display mode: pencil + grip pinned to the node's bottom corners ── */
 ${G} .floyo-sticky-wrapper[data-mode="display"] .floyo-display-actions {
-    left: -6px !important;
-    right: -6px !important;
+    left: -13px !important;
+    right: -13px !important;
     bottom: -21px !important;
     min-height: 24px !important;
     padding: 0 10px 6px !important;
@@ -55,15 +56,15 @@ ${G} .floyo-sticky-wrapper[data-mode="display"] .floyo-sticky-body {
 
 /* ── Editor mode: full-width toolbar + footer, footer flush with the node ── */
 ${G} .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-footer {
-    left: -6px !important;
-    right: -6px !important;
+    left: -13px !important;
+    right: -13px !important;
     bottom: -21px !important;
     min-height: 34px !important;
     border-radius: 0 0 14px 14px !important;
 }
 ${G} .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-toolbar {
-    margin-left: -6px !important;
-    margin-right: -6px !important;
+    margin-left: -13px !important;
+    margin-right: -13px !important;
 }
 ${G} .floyo-sticky-wrapper[data-mode="editor"] .floyo-sticky-body {
     padding-bottom: 34px !important;
