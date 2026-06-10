@@ -151,6 +151,19 @@ const THEMES = {
         codeBg:     "#171717",
         swatch:     "#737373",
     },
+    raspberry: {                           // Matt: Raspberry 8 fill / Raspberry 7 outline
+        bg:         "#550027",             // fill — Raspberry 8
+        bgGradient: "linear-gradient(180deg, #550027 0%, #4D0023 100%)",
+        header:     "#3D001C",
+        headerHover:"#790038",
+        toolbar:    "#3D001C",
+        text:       "#FCE7F3",
+        textMuted:  "#F9A8D4",
+        accent:     "#F472B6",
+        border:     "#790038",             // outline — Raspberry 7
+        codeBg:     "#33001A",
+        swatch:     "#EC4899",             // bright raspberry-pink swatch dot
+    },
 };
 
 const DEFAULT_THEME = "purple";
@@ -191,58 +204,42 @@ function isUserNativeTitle(value) {
 // headings, bold, italic, underline, strikethrough, inline code, code
 // blocks, and bullet + numbered lists.
 const DEFAULT_CONTENT = `<h1>📝 Floyo Sticky Note</h1>
-<p>This is a <b>canvas-only documentation node</b> built for the <i>Floyo workflow library</i> on top of ComfyUI. Use it to <u>annotate</u> and <b>describe parts of your workflow</b> right next to the nodes they explain — no need to leave the canvas.</p>
+<p>A canvas note that <b>documents</b> your <i>workflow</i> — every point below <u>uses</u> the feature it names. Double-click to edit.</p>
 
-<h2>✨ What you can do here</h2>
-<p>Every common rich-text feature you'd expect from a real editor — all wired up to <code>document.execCommand</code> for that battle-tested browser support:</p>
+<h2>✏️ Text</h2>
 <ul>
-<li><b>Bold</b>, <i>italic</i>, <u>underline</u>, and <s>strikethrough</s> for emphasis.</li>
-<li><b>Three heading levels</b> — H₁ for titles, H₂ for sections, H₃ for sub-sections.</li>
-<li>Inline <code>code</code> spans and full code blocks (try the <b>&lt;/&gt;</b> button).</li>
-<li>Both <b>bullet</b> and <b>numbered</b> lists, with proper nesting.</li>
-<li>Drop in <b>images</b> and <b>YouTube</b> / <b>Vimeo</b> videos via URL — they render as clickable preview cards.</li>
+<li><b>H₁</b>, <b>H₂</b>, <b>H₃</b> headings, plus plain paragraphs for the rest.</li>
+<li><span style="font-size:13px">A−</span> and <span style="font-size:20px">A+</span> shrink or grow the selected text.</li>
+<li><b>Bold</b>, <i>italic</i>, <u>underline</u>, <s>strikethrough</s>.</li>
+<li><b>Tₓ</b> clears all formatting from a selection.</li>
+<li>The <b>&lt;/&gt;</b> button makes a code block:</li>
 </ul>
+<pre>steps: 20
+cfg: 7.5
+sampler: euler</pre>
 
-<h2>🎨 Theming</h2>
-<p>Pick from three Floyo-branded themes via the footer swatches:</p>
+<h2>📋 Lists, media &amp; links</h2>
+<ul>
+<li>Bullet list (this one).</li>
+</ul>
 <ol>
-<li><b>Purple</b> — the default, calm and neutral.</li>
-<li><b>Blue</b> — perfect for "info" or "reference" notes.</li>
-<li><b>Green</b> — pair with completed sections or "best practice" callouts.</li>
+<li>Numbered list (this one).</li>
 </ol>
-<p>The theme swap is <u>instant</u> and the colour syncs across the title bar, body, accent text, code blocks, and the directional notch.</p>
-
-<h3>About the font</h3>
-<p>The title bar uses the <b>ArcadePixelNeue</b> font for a bit of Floyo brand character. The body uses your system stack by default but you can pick <b>Roboto</b>, <b>Arcade</b>, or <b>Janeiro</b> from the footer dropdown.</p>
-
-<h2>🧭 Pointing at things</h2>
-<p>The 4-arrow compass in the footer projects a <b>matching-colour notch</b> out of any edge of the node — so when a sticky is sitting between a bunch of other nodes, a reader can tell exactly <i>which</i> node it's annotating. Click an arrow once to add the notch, click it again to clear.</p>
-
-<h3>Pro tips</h3>
 <ul>
-<li><b>Double-click</b> the body to enter editor mode. Double-click again outside, or click the green ✓, to save and exit.</li>
-<li><b>Double-click the title bar</b> to rename the note.</li>
-<li>Inside a code block, <b>press Enter on an empty line</b> (or hit Arrow-Down at the bottom) to escape back to a paragraph — same UX as Slack and Notion.</li>
-<li>To delete a video or image, <b>hover over it</b> and a small floating toolbar appears with <b>−</b> / <b>+</b> / <b>× Remove</b> controls.</li>
+<li>Insert an <b>image</b> by pasting its URL.</li>
+<li>Embed a <b>YouTube</b> or <b>Vimeo</b> video by URL.</li>
+<li>Select text, then turn it into a <a href="https://www.floyo.ai">link</a>.</li>
+<li>Add a divider line with the divider button:</li>
 </ul>
+<hr class="floyo-divider" />
 
-<h2>⚙️ Under the hood</h2>
-<p>The node is a custom ComfyUI extension that lives in <code>web/js/floyo_sticky_note.js</code>. It registers as a LiteGraph node with <s>no inputs</s> and <s>no outputs</s> — so it's <u>skipped by the prompt queue at run time</u> and exists purely as a documentation artifact on the canvas.</p>
-
-<pre><code>// The Python side is just registration boilerplate
-class FloyoStickyNote:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {}}
-    RETURN_TYPES = ()
-    FUNCTION = "noop"
-    CATEGORY = "Floyo/Notes"
-    def noop(self):
-        return ()</code></pre>
-
-<h2>📌 Final note</h2>
-<p>This sticky note is built for the <b>top 50 Floyo workflows</b> conversion project — every shipped workflow should have a couple of these placed next to its key nodes to walk the user through what's happening.</p>
-<p>Happy documenting! ✍️</p>`;
+<h2>🎨 Look &amp; controls</h2>
+<ul>
+<li><b>Themes</b> via the footer swatches: <b>Purple</b>, <b>Blue</b>, <b>Green</b>, <b>Grey</b>, <b>Raspberry</b>.</li>
+<li>The footer <b>compass</b> points a matching-colour notch out of any edge toward the node you're describing — click an arrow again to clear it.</li>
+<li><b>Edit:</b> double-click the body, or use the pencil at bottom-right. <b>Save:</b> click the green ✓ or click outside.</li>
+<li><b>Rename:</b> double-click the title bar. <b>Resize:</b> drag the bottom-right grip.</li>
+</ul>`;
 
 /* ─── Inject styles + Google Fonts (once) ─────────────────────────────── */
 
@@ -521,6 +518,13 @@ const STYLES = `
     --text-mute:${THEMES.grey.textMuted}; --accent:${THEMES.grey.accent};
     --border:${THEMES.grey.border}; --code-bg:${THEMES.grey.codeBg};
 }
+.floyo-sticky-wrapper[data-theme="raspberry"] {
+    --bg:${THEMES.raspberry.bg}; --bg-grad:${THEMES.raspberry.bgGradient};
+    --header:${THEMES.raspberry.header}; --hover:${THEMES.raspberry.headerHover};
+    --toolbar:${THEMES.raspberry.toolbar}; --text:${THEMES.raspberry.text};
+    --text-mute:${THEMES.raspberry.textMuted}; --accent:${THEMES.raspberry.accent};
+    --border:${THEMES.raspberry.border}; --code-bg:${THEMES.raspberry.codeBg};
+}
 
 /* ── Toolbar (editor mode only) ── */
 .floyo-sticky-toolbar {
@@ -721,6 +725,34 @@ const STYLES = `
     width: 13px;
     height: 13px;
     transform: translate(0, 0);
+}
+
+/* Display-mode Floyo wordmark — bottom-LEFT, the SAME logo as the editor footer,
+   sitting directly on the body (no bar behind it). Sized to the slim display
+   strip. Clickable (opens Floyo); the JS swallows mousedown so it never starts a
+   canvas drag or marquee-select. */
+.floyo-display-brand {
+    height: 16px;
+    width: auto;
+    flex: 0 0 auto;
+    align-self: flex-end;
+    user-select: none;
+    pointer-events: all;
+    cursor: pointer;
+    opacity: 0.95;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+
+/* Right cluster — the Edit pencil packed next to the resize grip at the
+   bottom-RIGHT. flex:0 0 auto so it keeps its natural width and the parent's
+   space-between drops it on the right, opposite the logo. The wrapper is
+   click-through; only the pencil + grip inside it take pointer events. */
+.floyo-display-tools {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+    pointer-events: none;
 }
 
 /* Rich-text styles inside body */
@@ -1131,6 +1163,7 @@ const STYLES = `
 .floyo-swatch.swatch-blue   { background: ${THEMES.blue.swatch}; }
 .floyo-swatch.swatch-green  { background: ${THEMES.green.swatch}; }
 .floyo-swatch.swatch-grey   { background: ${THEMES.grey.swatch}; }
+.floyo-swatch.swatch-raspberry { background: ${THEMES.raspberry.swatch}; }
 
 /* Save button — Matt's Figma 970-485 spec.
    Background: Mint/Mint 4 #3CE195 (the same green as the pixel-art
@@ -1503,23 +1536,42 @@ function setupStickyNote(node) {
     // Both are hidden once the user enters editor mode.
     const displayActions = document.createElement("div");
     displayActions.className = "floyo-display-actions";
-    // Edit pencil (bottom-left) + three-line resize grip (bottom-right), per
-    // Figma 902-277 — both are bare icons on the body (no box, no logo, no bar).
-    // The pencil's inline white fill is muted to a low opacity via CSS.
+    // Display-mode bottom (per request): the Floyo wordmark pinned bottom-LEFT
+    // (the SAME logo as the editor footer — no bar behind it) and, on the RIGHT,
+    // the Edit pencil sitting next to the resize grip. The save/check button and
+    // the colour palette stay EDITOR-only, so display mode shows just: logo |
+    // edit + grip, directly on the body. Both icons are bare (no box); the
+    // pencil's white fill is muted via CSS. New class names
+    // (.floyo-display-brand / .floyo-display-tools) intentionally sidestep the
+    // older figma-bottom-fix rules that hid the logo / spread the right cluster.
     displayActions.innerHTML = `
-        <button type="button" class="floyo-display-edit" title="Edit">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
-            </svg>
-        </button>
-        <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
-                <line x1="12" y1="7" x2="7" y2="12" stroke="white" stroke-linecap="round"/>
-                <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
-            </svg>
+        <img class="floyo-display-brand" src="${FLOYO_LOGO()}" alt="Floyo" draggable="false" title="Open Floyo">
+        <div class="floyo-display-tools">
+            <button type="button" class="floyo-display-edit" title="Edit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M4.66602 2.33301H1.16602V10.5H9.33301V7H10.5V11.666H0V1.16602H4.66602V2.33301ZM3.5 8.16602H5.83301V9.33301H2.33301V5.83301H3.5V8.16602ZM7 8.16602H5.83301V7H7V8.16602ZM9.33301 5.83301H8.16699V7H7V5.83301H8.16602V4.66602H9.33301V5.83301ZM4.66602 5.83301H3.5V4.66602H4.66602V5.83301ZM5.83301 4.66602H4.66602V3.5H5.83301V4.66602ZM10.5 4.66602H9.33301V3.5H10.5V4.66602ZM7 3.5H5.83301V2.33301H7V3.5ZM11.666 3.5H10.5V2.33301H11.666V3.5ZM9.33301 1.16602H8.16699V2.33301H7V1.16602H8.16602V0H9.33301V1.16602ZM10.5 2.33301H9.33301V1.16602H10.5V2.33301Z" fill="#FFFFFF"/>
+                </svg>
+            </button>
+            <div class="floyo-display-grip" aria-hidden="true" title="Drag the node corner to resize">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <line x1="12" y1="3" x2="3" y2="12" stroke="white" stroke-linecap="round"/>
+                    <line x1="12" y1="7" x2="7" y2="12" stroke="white" stroke-linecap="round"/>
+                    <line x1="12" y1="11" x2="11" y2="12" stroke="white" stroke-linecap="round"/>
+                </svg>
+            </div>
         </div>
     `;
+    // Wire the bottom-left wordmark: open Floyo, and swallow mousedown so a click
+    // on the logo never starts a LiteGraph node-drag / marquee select.
+    const displayBrand = displayActions.querySelector(".floyo-display-brand");
+    if (displayBrand) {
+        displayBrand.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+        displayBrand.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open("https://www.floyo.ai", "_blank", "noopener,noreferrer");
+        });
+    }
 
     body.append(display, editor, imgTools);
 
@@ -2643,7 +2695,7 @@ function createFooter() {
 
     const swatches = document.createElement("div");
     swatches.className = "floyo-footer-swatches";
-    ["purple", "blue", "green", "grey"].forEach((t) => {
+    ["purple", "blue", "green", "grey", "raspberry"].forEach((t) => {
         const sw = document.createElement("button");
         sw.type = "button";
         sw.className = `floyo-swatch swatch-${t}`;
