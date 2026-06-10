@@ -111,7 +111,14 @@ app.registerExtension({
     async setup() {
         // Never let a setup error break the ComfyUI canvas.
         try {
-            if (window.__floyoStickyTextSizeFix) return;
+            // The module can be evaluated twice (the platform can import it via
+            // its proxy URL and via the dispatch URL — two module instances), so
+            // a boolean guard isn't enough: store the live handler on window and
+            // swap it, so exactly ONE listener is ever active.
+            if (window.__floyoStickyTextSizeHandler) {
+                document.removeEventListener("click", window.__floyoStickyTextSizeHandler, true);
+            }
+            window.__floyoStickyTextSizeHandler = handleClick;
             window.__floyoStickyTextSizeFix = true;
             document.addEventListener("click", handleClick, true); // capture phase
         } catch (_) {}
