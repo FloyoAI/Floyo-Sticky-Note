@@ -32,18 +32,19 @@ import { app } from "../../../scripts/app.js";
 const STYLE_ID = "floyo-sticky-raspberry-display-fix";
 const FLOYO_URL = "https://www.floyo.ai";
 
-/* Raspberry palette — kept byte-identical to THEMES.raspberry in the main file. */
+/* Raspberry palette — design tokens (Matt): Raspberry 8 = #550027 (fill),
+   Raspberry 7 = #790038 (outline). Kept in sync with THEMES.raspberry. */
 const RB = {
-    bg:        "#4A1234",
-    bgGrad:    "linear-gradient(180deg, #4A1234 0%, #43102E 100%)",
-    header:    "#3A0E28",
-    hover:     "#8C1F57",
-    toolbar:   "#3A0E28",
+    bg:        "#550027",   // Raspberry 8
+    bgGrad:    "linear-gradient(180deg, #550027 0%, #4D0023 100%)",
+    header:    "#3D001C",
+    hover:     "#790038",
+    toolbar:   "#3D001C",
     text:      "#FCE7F3",
     textMute:  "#F9A8D4",
     accent:    "#F472B6",
-    border:    "#8C1F57",
-    codeBg:    "#2E0A1F",
+    border:    "#790038",   // Raspberry 7
+    codeBg:    "#33001A",
     swatch:    "#EC4899",
 };
 

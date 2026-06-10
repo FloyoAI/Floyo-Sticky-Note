@@ -151,17 +151,17 @@ const THEMES = {
         codeBg:     "#171717",
         swatch:     "#737373",
     },
-    raspberry: {                           // Raspberry — deep wine fill, pink accent
-        bg:         "#4A1234",             // fill — dark raspberry/wine
-        bgGradient: "linear-gradient(180deg, #4A1234 0%, #43102E 100%)",
-        header:     "#3A0E28",
-        headerHover:"#8C1F57",
-        toolbar:    "#3A0E28",
+    raspberry: {                           // Matt: Raspberry 8 fill / Raspberry 7 outline
+        bg:         "#550027",             // fill — Raspberry 8
+        bgGradient: "linear-gradient(180deg, #550027 0%, #4D0023 100%)",
+        header:     "#3D001C",
+        headerHover:"#790038",
+        toolbar:    "#3D001C",
         text:       "#FCE7F3",
         textMuted:  "#F9A8D4",
         accent:     "#F472B6",
-        border:     "#8C1F57",             // outline — medium raspberry
-        codeBg:     "#2E0A1F",
+        border:     "#790038",             // outline — Raspberry 7
+        codeBg:     "#33001A",
         swatch:     "#EC4899",             // bright raspberry-pink swatch dot
     },
 };
