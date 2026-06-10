@@ -58,6 +58,12 @@ function handleClick(e) {
         const btn = e.target && e.target.closest &&
             e.target.closest('.floyo-tool-btn[data-cmd="increaseTextSize"], .floyo-tool-btn[data-cmd="decreaseTextSize"]');
         if (!btn) return;
+        // The platform can evaluate this module more than once (proxy URL and
+        // dispatch URL are distinct module instances), and window-level guards
+        // proved unreliable across those instances. Mark the EVENT itself so a
+        // given click is resized exactly once no matter how many copies run.
+        if (e.__floyoTextSizeHandled) return;
+        e.__floyoTextSizeHandled = true;
         const wrapper = btn.closest(".floyo-sticky-wrapper");
         const editor = wrapper && wrapper.querySelector(".floyo-sticky-editor");
         if (!editor) return;
