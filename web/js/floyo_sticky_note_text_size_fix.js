@@ -122,11 +122,16 @@ app.registerExtension({
             // a boolean guard isn't enough: store the live handler on window and
             // swap it, so exactly ONE listener is ever active.
             if (window.__floyoStickyTextSizeHandler) {
+                window.removeEventListener("click", window.__floyoStickyTextSizeHandler, true);
                 document.removeEventListener("click", window.__floyoStickyTextSizeHandler, true);
             }
             window.__floyoStickyTextSizeHandler = handleClick;
             window.__floyoStickyTextSizeFix = true;
-            document.addEventListener("click", handleClick, true); // capture phase
+            // Listen on WINDOW capture: it fires BEFORE document-capture listeners,
+            // so stopPropagation here also silences any stale earlier copies of
+            // this module that are stuck on the document (cached sessions) — the
+            // resize can only ever be applied once.
+            window.addEventListener("click", handleClick, true);
         } catch (_) {}
     },
 });
