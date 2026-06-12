@@ -20,7 +20,7 @@
 ## Why you'll want it
 
 - 🧭 **Make workflows self‑explaining** — annotate steps so anyone (including future‑you) gets it at a glance.
-- 🎨 **On‑brand & pretty** — 4 polished themes, pixel‑art title font, clean typography.
+- 🎨 **On‑brand & pretty** — 5 polished themes, pixel‑art title font, clean typography.
 - 🖊️ **Real rich text** — headings, lists, code, links, images and videos — not just plain text.
 - 🎯 **Point at things** — a direction notch shows *which* node a note is talking about.
 - 💾 **Zero‑friction & safe** — autosaves into the workflow JSON, and **never touches execution** (no inputs/outputs, nothing to slow your runs).
@@ -37,12 +37,12 @@
 | **Inline style** | **Bold** • *Italic* • <u>Underline</u> • ~~Strikethrough~~ • Tₓ (clear formatting) |
 | **Blocks** | Code block • Bullet list • Numbered list |
 | **Insert** | Image (URL) • Video (YouTube / Vimeo) • Link • Divider |
-| **Themes** | 🟣 Purple (default) • 🔵 Blue • 🟢 Green • ⚫ Grey |
+| **Themes** | 🟣 Purple (default) • 🔵 Blue • 🟢 Green • ⚫ Grey • 🍓 Raspberry |
 | **Pointer** | Direction notch — up / down / left / right |
 | **Title** | Inline rename |
 | **Layout** | Collapse / expand • Drag to move • Resize • Scroll inside note |
 | **Clipboard** | Copy keeps the note's colour • Paste cleans to plain text |
-| **Persistence** | Title, content, theme, font, pointer — all saved with the workflow |
+| **Persistence** | Title, content, theme, pointer — all saved with the workflow |
 
 Each option is explained in its own short section below. 👇
 
@@ -70,7 +70,7 @@ Restart ComfyUI and hard‑refresh the browser (`Cmd/Ctrl + Shift + R`) so the l
 ## 🚀 Quick start
 
 1. **Add** the node to the canvas.
-2. **Double‑click the body** to enter the editor.
+2. **Double‑click the body** — or click the **✎ pencil** at the bottom‑right — to enter the editor.
 3. Type, format with the toolbar, pick a theme.
 4. **Save** with the green ✓ — or just click anywhere outside the note.
 
@@ -105,6 +105,8 @@ Open the editor (double‑click the body) and the toolbar appears at the top. Se
 ### Working with media
 Hover any inserted image/video to get a mini toolbar: **−** smaller, **+** bigger, **× Remove**. A fresh paragraph is auto‑added below media so you can keep typing.
 
+> **Safe delete:** pressing **Backspace** at the start of the line below an image/video/divider **selects it first**; press Backspace again to actually delete it — so you never wipe out media by accident.
+
 ---
 
 ## 🎛️ Footer controls
@@ -112,9 +114,27 @@ Hover any inserted image/video to get a mini toolbar: **−** smaller, **+** big
 The footer shows in editor mode, left → right:
 
 - **Floyo logo** — opens [floyo.ai](https://floyo.ai) in a new tab.
-- **Theme swatches** — switch between **Purple** (default), **Blue**, **Green**, **Grey**. The whole note (title bar, body, accent, code, notch) re‑tints together.
+- **Theme swatches** — switch between **Purple** (default), **Blue**, **Green**, **Grey**, **Raspberry**. The whole note (title bar, body, accent, code, notch) re‑tints together.
 - **Direction notch (compass)** — click **up / down / left / right** to project a triangular pointer from that edge, so readers know which node the sticky annotates. Click the same arrow again to remove it.
 - **Save ✓** — saves your edits and returns to display mode.
+
+### 🎨 Theme colours
+
+| Theme | Fill | Outline |
+| --- | --- | --- |
+| 🟣 **Purple** (default) | `#3A206B` | `#543294` |
+| 🔵 **Blue** | `#192765` | `#2E419E` |
+| 🟢 **Green** | `#002514` | `#01341C` |
+| ⚫ **Grey** | `#222222` | `#333333` |
+| 🍓 **Raspberry** | `#550027` | `#790038` |
+
+### Display mode (after saving)
+
+The colour palette and the **✓** are editor‑only — once you save, the note shows a clean bottom strip instead:
+
+- **Floyo logo** stays at the **bottom‑left** (no bar behind it — it sits straight on the note).
+- **✎ Edit pencil** at the **bottom‑right** — one click re‑opens the editor.
+- **Resize grip** in the very corner next to the pencil.
 
 ---
 
@@ -123,36 +143,26 @@ The footer shows in editor mode, left → right:
 | Action | Result |
 | --- | --- |
 | **Double‑click the body** | Enter the editor. |
+| **Click the ✎ pencil** (bottom‑right, display mode) | Enter the editor. |
 | **Click the chevron** in the title bar | Collapse to just the title bar (▼ ↔ ▶) — great when the canvas is crowded. |
 | **Double‑click the title bar** | Rename the note inline. |
 | **Drag the title bar** | Move the note (standard LiteGraph). |
-| **Drag the bottom‑right corner** | Resize; the content reflows. |
+| **Drag the resize grip** (bottom‑right corner) | Resize; the content reflows. |
 | **Scroll inside the note** | Scrolls the note's content instead of zooming the canvas. |
 | **Click outside the note** | Saves and exits the editor. |
 
 ### Clipboard
 - **Copy** from a note keeps the note's **text colour**, so it stays readable when pasted into other rich‑text apps (instead of turning black).
 - **Paste** into a note is cleaned to **plain text**, so it picks up the note's styling instead of dragging in foreign formatting.
+- Copy / cut / paste **stays inside the editor** — it never reaches the canvas, so pasting text can't accidentally duplicate nodes.
 
 ---
 
 ## 💾 Saving & persistence
 
-Everything is stored with the workflow JSON under a single `floyo_state` key:
-
-```jsonc
-{
-  "floyo_state": {
-    "title":      "K‑Sampler settings",
-    "content":    "<h1>…</h1><p>…</p>",
-    "theme":      "purple",
-    "font":       "Default",
-    "pointerDir": "down"
-  }
-}
-```
-
-Reload the workflow and the note returns exactly as you left it.
+- Everything **autosaves into the workflow JSON** — nothing extra to manage.
+- Saved per note: **title • content • theme • pointer direction**.
+- Reload the workflow and the note returns **exactly as you left it**.
 
 ---
 
@@ -174,12 +184,7 @@ This node is **purely documentation**. It has **no inputs, no outputs**, contrib
 
 ## 🤝 Contributing
 
-Issues and PRs are welcome.
-
-1. Fork the repo and create a branch.
-2. The front‑end lives in `web/js/`; the (no‑op) Python class is in `nodes.py`.
-3. Keep changes focused, test in a real ComfyUI canvas, and hard‑refresh before verifying.
-4. Open a pull request describing the change.
+Issues and PRs are welcome — keep changes focused, test in a real ComfyUI canvas, and hard‑refresh the browser before verifying.
 
 ---
 

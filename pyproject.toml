@@ -1,16 +1,18 @@
 [project]
 name = "floyo-sticky-note"
-version = "0.1.0"
-description = "Stylised sticky-note documentation node for Floyo ComfyUI workflows. Canvas-only, never executes."
+version = "1.0.0"
+description = "Rich-text sticky notes for the ComfyUI canvas. Document your workflow right next to the nodes it explains — headings, lists, code blocks, images, videos, links, 5 colour themes and a pointer notch. Pure annotation: no inputs, no outputs, never runs."
 authors = [
     { name = "Floyo" }
 ]
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 requires-python = ">=3.8"
 
 [project.urls]
 "Homepage" = "https://floyo.ai"
+"Repository" = "https://github.com/FloyoAI/Floyo-Sticky-Note"
+"BugTracker" = "https://github.com/FloyoAI/Floyo-Sticky-Note/issues"
 
 [tool.comfy]
 PublisherId = "floyo"
