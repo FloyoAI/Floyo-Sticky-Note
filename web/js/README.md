@@ -12,6 +12,7 @@ they affect both browser cache keys and import order.
 | `floyo_sticky_note_editor_cursor_title_fix.js` | Compatibility implementation | Forces editor text cursor behavior and preserves arbitrary note titles in cached hosted sessions. |
 | `floyo_sticky_note_editor_cursor_title_final_fix.js` | Compatibility implementation | Final fresh cache-busting cursor/title persistence override. |
 | `floyo_sticky_note_editor_cursor_title_owner_fix.js` | Compatibility implementation | Fresh owner-document cursor/title override for immutable cached hosted sessions. |
+| `floyo_sticky_note_image_edges_fix.js` | Compatibility implementation | Images without backdrop box or outline; hides blank lines at the start and end of a note in display mode so media sits flush. |
 | `floyo_sticky_note_remote_compat.js` | Compatibility implementation | Fixes cached remote sessions for title/logo/badge behavior. |
 | `floyo_sticky_note_wheel_element_guard.js` | Compatibility implementation | Earlier element-level wheel containment patch. |
 | `floyo_sticky_note_wheel_scroll_guard.js` | Compatibility implementation | Stronger sticky-note scroll wheel guard. |
