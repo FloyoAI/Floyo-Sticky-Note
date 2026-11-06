@@ -9,6 +9,7 @@ they affect both browser cache keys and import order.
 | File | Role | Notes |
 | --- | --- | --- |
 | `floyo_sticky_note.js` | Canonical implementation | Defines and renders the `FloyoStickyNote` node. New feature work should start here. |
+| `floyo_sticky_note_media_selection_exit_fix.js` | Compatibility implementation | Drops the image/video selection when the editor opens or closes; display mode never shows the selection ring or the media tools. |
 | `floyo_sticky_note_editor_cursor_title_fix.js` | Compatibility implementation | Forces editor text cursor behavior and preserves arbitrary note titles in cached hosted sessions. |
 | `floyo_sticky_note_editor_cursor_title_final_fix.js` | Compatibility implementation | Final fresh cache-busting cursor/title persistence override. |
 | `floyo_sticky_note_editor_cursor_title_owner_fix.js` | Compatibility implementation | Fresh owner-document cursor/title override for immutable cached hosted sessions. |
