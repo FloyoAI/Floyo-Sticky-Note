@@ -10,6 +10,7 @@ they affect both browser cache keys and import order.
 | --- | --- | --- |
 | `floyo_sticky_note.js` | Canonical implementation | Defines and renders the `FloyoStickyNote` node. New feature work should start here. |
 | `floyo_sticky_note_media_selection_exit_fix.js` | Compatibility implementation | Drops the image/video selection when the editor opens or closes; display mode never shows the selection ring or the media tools. |
+| `floyo_sticky_note_toolbar_selection_keep_fix.js` | Compatibility implementation | Keeps the selected text when a toolbar button is clicked; ComfyUI frontend 1.57 clears it on pointerdown, so H1/H2/H3, bold and the other buttons formatted line 1 or nothing. |
 | `floyo_sticky_note_editor_cursor_title_fix.js` | Compatibility implementation | Forces editor text cursor behavior and preserves arbitrary note titles in cached hosted sessions. |
 | `floyo_sticky_note_editor_cursor_title_final_fix.js` | Compatibility implementation | Final fresh cache-busting cursor/title persistence override. |
 | `floyo_sticky_note_editor_cursor_title_owner_fix.js` | Compatibility implementation | Fresh owner-document cursor/title override for immutable cached hosted sessions. |
